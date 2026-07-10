@@ -137,11 +137,15 @@ async function main() {
     },
     {
       code: 'QC_OFFICER', name: 'Petugas QC',
-      description: 'Petugas pemeriksaan kualitas',
+      description: 'Petugas pemeriksaan kualitas (dapat digunakan untuk aplikasi TaniTrust Mobile QC)',
       permissions: [
-        'dashboard.view', 'farmers.view', 'farmer_representatives.view',
+        'dashboard.view',
+        'farmers.view', 'farmers.create',
+        'farmer_representatives.view',
         'commodities.view', 'price_lists.view', 'qc_templates.view',
-        'farmer_sales.view', 'qc_results.view', 'qc_results.create', 'qc_history.view', 'batch.view',
+        'farmer_sales.view', 'farmer_sales.create', 'farmer_sales.edit',
+        'qc_results.view', 'qc_results.create',
+        'qc_history.view', 'batch.view',
       ],
     },
     {
@@ -207,24 +211,23 @@ async function main() {
   // 3. Users
   const passwordHash = await bcrypt.hash('password123', 12)
   const userDefinitions = [
-    { name: 'System Admin', email: 'admin@karyatani.local', role: 'SYSTEM_ADMIN' },
-    { name: 'Manager Koperasi', email: 'manager@karyatani.local', role: 'COOPERATIVE_MANAGER' },
-    { name: 'Supervisor QC', email: 'supervisor.qc@karyatani.local', role: 'QC_SUPERVISOR' },
-    { name: 'Petugas QC', email: 'qc@karyatani.local', role: 'QC_OFFICER' },
-    { name: 'Staff Keuangan', email: 'finance@karyatani.local', role: 'FINANCE_STAFF' },
-    { name: 'Admin Koperasi', email: 'koperasi@karyatani.local', role: 'ADMIN_KOPERASI' },
-    { name: 'Viewer', email: 'viewer@karyatani.local', role: 'VIEWER' },
+    { name: 'System Admin', email: 'admin@karyatani.local', phone: '081200000001', role: 'SYSTEM_ADMIN' },
+    { name: 'Manager Koperasi', email: 'manager@karyatani.local', phone: '081200000002', role: 'COOPERATIVE_MANAGER' },
+    { name: 'Supervisor QC', email: 'supervisor.qc@karyatani.local', phone: '081200000003', role: 'QC_SUPERVISOR' },
+    { name: 'Siti Rahma', email: 'qc@karyatani.local', phone: '081234567890', role: 'QC_OFFICER' },
+    { name: 'Staff Keuangan', email: 'finance@karyatani.local', phone: '081200000005', role: 'FINANCE_STAFF' },
+    { name: 'Admin Koperasi', email: 'koperasi@karyatani.local', phone: '081200000006', role: 'ADMIN_KOPERASI' },
+    { name: 'Viewer', email: 'viewer@karyatani.local', phone: '081200000007', role: 'VIEWER' },
   ]
 
   const users: Record<string, any> = {}
   for (const userDef of userDefinitions) {
     const user = await prisma.user.upsert({
       where: { email: userDef.email },
-      update: { name: userDef.name, password_hash: passwordHash },
-      create: { name: userDef.name, email: userDef.email, password_hash: passwordHash },
+      update: { name: userDef.name, phone: userDef.phone, password_hash: passwordHash },
+      create: { name: userDef.name, email: userDef.email, phone: userDef.phone, password_hash: passwordHash },
     })
     users[userDef.email] = user
-    // userRoles already cleaned above
     await prisma.userRole.create({
       data: { user_id: user.id, role_id: roles[userDef.role].id },
     })

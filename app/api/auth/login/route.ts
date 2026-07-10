@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { verifyPassword } from '@/lib/auth/password'
-import { generateToken } from '@/lib/auth/jwt'
+import { generateToken, generateRefreshToken } from '@/lib/auth/jwt'
 import { loginSchema } from '@/lib/validations/auth'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -25,37 +25,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, password } = parsed.data
+    const { email, identifier, password } = parsed.data
+    const login = (identifier || email || '').trim()
     const meta = getRequestMeta(request)
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        user_roles: {
-          include: {
-            role: {
-              include: {
-                role_permissions: {
-                  include: { permission: true },
-                },
+    const isEmail = login.includes('@')
+
+    const userInclude = {
+      user_roles: {
+        include: {
+          role: {
+            include: {
+              role_permissions: {
+                include: { permission: true },
               },
             },
           },
         },
       },
-    })
+    }
+
+    const user = isEmail
+      ? await prisma.user.findUnique({ where: { email: login }, include: userInclude })
+      : await prisma.user.findFirst({ where: { phone: login }, include: userInclude })
 
     if (!user) {
       await createAuditLog({
         entityType: 'User',
         action: 'LOGIN_FAILED',
-        afterJson: { email, reason: 'user_not_found' },
+        afterJson: { identifier: login, reason: 'user_not_found' },
         sourceClient: 'web',
         ...meta,
       })
       return errorResponse(
         'INVALID_CREDENTIALS',
-        'Email atau kata sandi salah.',
+        'Email/nomor HP atau kata sandi salah.',
         undefined,
         401
       )
@@ -68,13 +72,13 @@ export async function POST(request: NextRequest) {
         entityType: 'User',
         entityId: user.id,
         action: 'LOGIN_FAILED',
-        afterJson: { email, reason: 'wrong_password' },
+        afterJson: { identifier: login, reason: 'wrong_password' },
         sourceClient: 'web',
         ...meta,
       })
       return errorResponse(
         'INVALID_CREDENTIALS',
-        'Email atau kata sandi salah.',
+        'Email/nomor HP atau kata sandi salah.',
         undefined,
         401
       )
@@ -94,7 +98,8 @@ export async function POST(request: NextRequest) {
       data: { last_login_at: new Date() },
     })
 
-    const token = generateToken({ userId: user.id, email: user.email })
+    const access_token = generateToken({ userId: user.id, email: user.email })
+    const refresh_token = generateRefreshToken(user.id)
 
     await createAuditLog({
       actorUserId: user.id,
@@ -108,16 +113,18 @@ export async function POST(request: NextRequest) {
     const { password_hash, ...userWithoutPassword } = user
 
     const response = successResponse({
-      token,
+      access_token,
+      refresh_token,
+      token: access_token,
       user: userWithoutPassword,
     })
 
-    response.cookies.set('token', token, {
+    response.cookies.set('token', access_token, {
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
     })
 
     return response

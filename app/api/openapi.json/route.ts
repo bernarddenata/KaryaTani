@@ -35,6 +35,7 @@ export async function GET() {
       { name: 'Files', description: 'Upload dan manajemen file' },
       { name: 'Audit Logs', description: 'Log aktivitas sistem' },
       { name: 'Mobile Farmer / Karya Taniku', description: 'API aplikasi mobile petani (Karya Taniku). Semua endpoint hanya dapat diakses oleh petani yang login dan hanya mengembalikan data milik petani sendiri.' },
+      { name: 'Mobile QC / TaniTrust QC', description: 'API untuk aplikasi mobile petugas QC (TaniTrust Mobile QC). Endpoint dapat berupa endpoint baru khusus mobile QC atau endpoint dashboard yang direuse dengan permission QC_OFFICER.' },
     ],
 
     paths: {
@@ -80,16 +81,17 @@ export async function GET() {
         post: {
           tags: ['Auth'],
           summary: 'Masuk ke sistem',
-          description: 'Autentikasi pengguna dengan email dan kata sandi. Mengembalikan token JWT.',
+          description: 'Autentikasi pengguna admin/QC officer dengan email atau nomor HP dan kata sandi. Mengembalikan access token JWT (valid 24 jam) dan refresh token (valid 30 hari).',
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['email', 'password'],
+                  required: ['password'],
                   properties: {
-                    email: { type: 'string', format: 'email', example: 'admin@karyatani.id' },
+                    email: { type: 'string', format: 'email', example: 'qc@karyatani.local', description: 'Email admin/QC officer. Salah satu dari email atau identifier wajib diisi.' },
+                    identifier: { type: 'string', example: '081234567890', description: 'Email atau nomor HP. Alternatif dari field email.' },
                     password: { type: 'string', example: 'password123' },
                   },
                 },
@@ -110,7 +112,9 @@ export async function GET() {
                           data: {
                             type: 'object',
                             properties: {
-                              token: { type: 'string' },
+                              access_token: { type: 'string', description: 'JWT access token, valid 24 jam.' },
+                              refresh_token: { type: 'string', description: 'JWT refresh token, valid 30 hari.' },
+                              token: { type: 'string', description: 'Alias untuk access_token (backward compatibility).' },
                               user: { $ref: '#/components/schemas/User' },
                             },
                           },
@@ -166,6 +170,74 @@ export async function GET() {
                       },
                     ],
                   },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/auth/refresh': {
+        post: {
+          tags: ['Auth'],
+          summary: 'Perbarui access token',
+          description: 'Menukarkan refresh token yang masih valid dengan pasangan access token dan refresh token baru. Endpoint ini tidak memerlukan bearer token pada header — refresh token dikirim melalui request body.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['refresh_token'],
+                  properties: {
+                    refresh_token: { type: 'string', description: 'Refresh token JWT yang didapat dari endpoint login.' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Token baru berhasil diterbitkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              access_token: { type: 'string', description: 'JWT access token baru, valid 24 jam.' },
+                              refresh_token: { type: 'string', description: 'JWT refresh token baru, valid 30 hari.' },
+                              token: { type: 'string', description: 'Alias untuk access_token (backward compatibility).' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Refresh token tidak valid atau sudah kadaluarsa',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'INVALID_REFRESH_TOKEN', message: 'Refresh token tidak valid atau sudah kadaluarsa.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
                 },
               },
             },
@@ -581,11 +653,73 @@ export async function GET() {
         get: {
           tags: ['Farmers'],
           summary: 'Daftar petani',
-          description: 'Mengembalikan daftar petani beserta info koperasi.',
+          description: 'Mengembalikan daftar petani beserta info koperasi. Mendukung pencarian dan berbagai filter. Response berisi field tambahan seperti member_number (alias farmer_number), main_commodity (nama komoditas utama dari FarmerSource pertama), dan farm_location.',
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Cari berdasarkan nama, telepon, nomor anggota, atau desa.',
+            },
+            {
+              name: 'phone',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter exact nomor telepon.',
+            },
+            {
+              name: 'member_number',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter exact nomor petani (juga menerima parameter farmer_number).',
+            },
+            {
+              name: 'village',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter contains nama desa.',
+            },
+            {
+              name: 'cooperative_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter berdasarkan koperasi.',
+            },
+            {
+              name: 'commodity_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter petani yang punya farmer_source dengan komoditas ini.',
+            },
+            {
+              name: 'status',
+              in: 'query',
+              schema: { type: 'string', enum: ['ACTIVE', 'INACTIVE'] },
+              description: 'Filter status petani.',
+            },
+            {
+              name: 'page',
+              in: 'query',
+              schema: { type: 'integer', default: 1, minimum: 1 },
+              description: 'Nomor halaman.',
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 20, maximum: 100 },
+              description: 'Jumlah data per halaman.',
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', minimum: 0 },
+              description: 'Alternatif untuk page — jumlah data yang dilewati.',
+            },
+          ],
           responses: {
             '200': {
-              description: 'Daftar petani',
+              description: 'Daftar petani. Setiap item termasuk field tambahan: member_number (alias farmer_number), main_commodity (nama komoditas utama dari FarmerSource primary), dan farm_location.',
               content: {
                 'application/json': {
                   schema: {
@@ -598,6 +732,7 @@ export async function GET() {
                             type: 'array',
                             items: { $ref: '#/components/schemas/Farmer' },
                           },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
                         },
                       },
                     ],
@@ -612,13 +747,36 @@ export async function GET() {
         post: {
           tags: ['Farmers'],
           summary: 'Tambah petani baru',
-          description: 'Membuat data petani baru.',
+          description: 'Membuat data petani baru. Endpoint menerima dua bentuk request body: (1) full-create body sesuai skema CreateFarmerInput (mencakup cooperative_id, farmer_number, name, phone, seller_type wajib), atau (2) quick-create body yang hanya wajib nama dan telepon — cocok untuk mobile QC yang perlu menambah petani baru saat check-in.',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/CreateFarmerInput' },
+                schema: {
+                  oneOf: [
+                    { $ref: '#/components/schemas/CreateFarmerInput' },
+                    {
+                      type: 'object',
+                      required: ['name', 'phone'],
+                      description: 'Quick-create body: cocok untuk mobile QC. Sistem otomatis generate farmer_number dan menggunakan koperasi aktif pertama jika cooperative_id tidak diisi.',
+                      properties: {
+                        name: { type: 'string' },
+                        phone: { type: 'string', minLength: 8 },
+                        village: { type: 'string' },
+                        address: { type: 'string' },
+                        nik: { type: 'string' },
+                        main_commodity: { type: 'string', description: 'Nama atau kode komoditas utama. Sistem akan mencari komoditas yang cocok.' },
+                        cooperative_id: { type: 'string', format: 'uuid', description: 'Opsional — jika tidak diisi, koperasi aktif pertama digunakan.' },
+                        seller_type: {
+                          type: 'string',
+                          enum: ['PEMILIK_LAHAN', 'PENGGARAP', 'PENYEWA_LAHAN', 'KELOMPOK_TANI', 'BADAN_USAHA', 'PENGEPUL_TERVERIFIKASI', 'LAINNYA'],
+                          default: 'PEMILIK_LAHAN',
+                        },
+                      },
+                    },
+                  ],
+                },
               },
             },
           },
@@ -643,6 +801,18 @@ export async function GET() {
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
+            '409': {
+              description: 'Nomor telepon petani sudah terdaftar',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'CONFLICT', message: 'Nomor telepon petani sudah terdaftar.' },
+                  },
+                },
+              },
+            },
             '422': {
               description: 'Data tidak valid',
               content: {
@@ -1312,6 +1482,98 @@ export async function GET() {
                 },
               },
             },
+          },
+        },
+      },
+      '/commodities/{id}/grades': {
+        get: {
+          tags: ['Commodities', 'Mobile QC / TaniTrust QC'],
+          summary: 'Daftar grade komoditas',
+          description: 'Mengembalikan daftar grade (dari PriceListItem) untuk komoditas tertentu, diambil dari price list yang aktif. Endpoint ini dipakai oleh aplikasi mobile QC untuk menampilkan opsi grade saat pencatatan hasil QC. Membutuhkan permission price_lists.view.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID komoditas.',
+            },
+            {
+              name: 'cooperative_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Opsional — jika tidak diisi, koperasi aktif dari sesi digunakan.',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar grade beserta harga per unit.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              commodity: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  code: { type: 'string' },
+                                  name: { type: 'string' },
+                                  default_unit: { type: 'string' },
+                                },
+                              },
+                              price_list: {
+                                type: 'object',
+                                nullable: true,
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  name: { type: 'string' },
+                                  valid_from: { type: 'string', format: 'date' },
+                                  valid_until: { type: 'string', format: 'date', nullable: true },
+                                  cooperative: {
+                                    type: 'object',
+                                    properties: {
+                                      id: { type: 'string', format: 'uuid' },
+                                      code: { type: 'string' },
+                                      name: { type: 'string' },
+                                    },
+                                  },
+                                },
+                              },
+                              grades: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    grade_name: { type: 'string', example: 'Grade A' },
+                                    grade_code: { type: 'string', example: 'A' },
+                                    price_per_unit: { type: 'number', example: 3200 },
+                                    unit: { type: 'string', example: 'kg' },
+                                    is_reject: { type: 'boolean', example: false },
+                                    sort_order: { type: 'integer', example: 0 },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
           },
         },
       },
@@ -2585,6 +2847,261 @@ export async function GET() {
           },
         },
       },
+      '/traceability': {
+        get: {
+          tags: ['Batch', 'Mobile QC / TaniTrust QC'],
+          summary: 'Daftar traceability batch',
+          description: 'Mengembalikan daftar batch penjualan untuk penelusuran (traceability). Mendukung pencarian bebas dan filter — dipakai oleh aplikasi mobile QC untuk mencari batch berdasarkan nomor batch, nomor penjualan, nama petani, atau komoditas.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Pencarian bebas pada batch_number, submission_number, atau nama petani.',
+            },
+            {
+              name: 'batch_number',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter berdasarkan nomor batch.',
+            },
+            {
+              name: 'submission_number',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter berdasarkan nomor penjualan/submission.',
+            },
+            {
+              name: 'farmer_name',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Filter berdasarkan nama petani.',
+            },
+            {
+              name: 'commodity_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter berdasarkan komoditas.',
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 20, maximum: 100 },
+              description: 'Jumlah data yang dikembalikan.',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar batch untuk traceability.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                id: { type: 'string', format: 'uuid' },
+                                submission_number: { type: 'string' },
+                                batch_number: { type: 'string' },
+                                farmer_name: { type: 'string' },
+                                farmer_number: { type: 'string' },
+                                commodity_name: { type: 'string' },
+                                received_weight: { type: 'number', nullable: true },
+                                status: { type: 'string' },
+                                status_label: { type: 'string' },
+                                created_at: { type: 'string', format: 'date-time' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/traceability/{batchNumber}': {
+        get: {
+          tags: ['Batch', 'Mobile QC / TaniTrust QC'],
+          summary: 'Detail traceability batch',
+          description: 'Mengembalikan detail lengkap traceability untuk satu batch: data penjualan, petani, komoditas, koperasi, hasil QC, estimasi pembayaran, foto bukti, sengketa terkait, dan timeline status.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'batchNumber',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Nomor batch (contoh: BATCH-KMD001-20260710-0001).',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail traceability batch.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              batch_number: { type: 'string' },
+                              current_status: { type: 'string' },
+                              current_status_label: { type: 'string' },
+                              submission: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  submission_number: { type: 'string' },
+                                  batch_number: { type: 'string' },
+                                  initial_weight: { type: 'number', nullable: true },
+                                  received_weight: { type: 'number', nullable: true },
+                                  received_at: { type: 'string', format: 'date-time', nullable: true },
+                                  created_at: { type: 'string', format: 'date-time' },
+                                  status: { type: 'string' },
+                                  status_label: { type: 'string' },
+                                  notes: { type: 'string', nullable: true },
+                                },
+                              },
+                              farmer: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  name: { type: 'string' },
+                                  farmer_number: { type: 'string' },
+                                  phone: { type: 'string' },
+                                  village: { type: 'string', nullable: true },
+                                },
+                              },
+                              commodity: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  code: { type: 'string' },
+                                  name: { type: 'string' },
+                                  default_unit: { type: 'string' },
+                                },
+                              },
+                              commodity_variant: {
+                                type: 'object',
+                                nullable: true,
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  name: { type: 'string' },
+                                },
+                              },
+                              cooperative: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  code: { type: 'string' },
+                                  name: { type: 'string' },
+                                },
+                              },
+                              qc_result: {
+                                type: 'object',
+                                nullable: true,
+                                properties: {
+                                  qc_result_id: { type: 'string', format: 'uuid' },
+                                  qc_officer: { type: 'string' },
+                                  submitted_at: { type: 'string', format: 'date-time', nullable: true },
+                                  final_grade_code: { type: 'string', nullable: true },
+                                  total_weight_checked: { type: 'number', nullable: true },
+                                  final_accepted_weight: { type: 'number', nullable: true },
+                                  total_rejected_weight: { type: 'number', nullable: true },
+                                  grade_breakdown: {
+                                    type: 'array',
+                                    items: {
+                                      type: 'object',
+                                      properties: {
+                                        grade_code: { type: 'string' },
+                                        grade_name: { type: 'string' },
+                                        weight: { type: 'number' },
+                                        price_per_unit: { type: 'number', nullable: true },
+                                        estimated_amount: { type: 'number', nullable: true },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                              payment_estimation: {
+                                type: 'object',
+                                nullable: true,
+                                properties: {
+                                  total_estimated_amount: { type: 'number' },
+                                  payment_status: { type: 'string' },
+                                  payment_status_label: { type: 'string' },
+                                  calculated_at: { type: 'string', format: 'date-time' },
+                                },
+                              },
+                              photos: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    url: { type: 'string' },
+                                    file_name: { type: 'string' },
+                                    type: { type: 'string' },
+                                  },
+                                },
+                              },
+                              disputes: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    dispute_number: { type: 'string' },
+                                    status: { type: 'string' },
+                                    status_label: { type: 'string' },
+                                    created_at: { type: 'string', format: 'date-time' },
+                                    resolved_at: { type: 'string', format: 'date-time', nullable: true },
+                                  },
+                                },
+                              },
+                              timeline: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    status: { type: 'string' },
+                                    label: { type: 'string' },
+                                    timestamp: { type: 'string', format: 'date-time' },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
 
       // ==================== QC Templates ====================
       '/qc-templates': {
@@ -3180,12 +3697,231 @@ export async function GET() {
           },
         },
       },
+      '/qc/{saleId}/draft': {
+        post: {
+          tags: ['QC', 'Mobile QC / TaniTrust QC'],
+          summary: 'Simpan draft QC',
+          description: 'Menyimpan draft hasil QC untuk penjualan tertentu. Endpoint ini idempotent — setiap pemanggilan akan mengganti state draft sebelumnya. Semua field opsional; petugas QC dapat menyimpan progres bertahap dari aplikasi mobile. Endpoint /qc/{saleId}/start wajib dipanggil terlebih dahulu untuk membuat draft.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'saleId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID penjualan.',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    parameter_values: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          qc_template_item_id: { type: 'string', format: 'uuid' },
+                          parameter_id: { type: 'string', format: 'uuid', description: 'Alias untuk qc_template_item_id.' },
+                          value_text: { type: 'string' },
+                          value_number: { type: 'number' },
+                          value_json: { type: 'object' },
+                          notes: { type: 'string' },
+                          proof_file_id: { type: 'string', format: 'uuid' },
+                        },
+                      },
+                    },
+                    grade_breakdowns: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          grade_id: { type: 'string', description: 'PriceListItem id — jika diisi, harga akan diambil dari price list.' },
+                          grade_code: { type: 'string' },
+                          grade_name: { type: 'string' },
+                          weight: { type: 'number', minimum: 0 },
+                          reason: { type: 'string' },
+                        },
+                      },
+                    },
+                    overall_notes: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Draft QC berhasil disimpan.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/QcResult' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Draft QC belum dibuat — panggil /qc/{saleId}/start terlebih dahulu.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NO_DRAFT_QC', message: 'Draft QC belum dibuat. Panggil endpoint start terlebih dahulu.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/qc/{saleId}/preview-payment': {
+        post: {
+          tags: ['QC', 'Mobile QC / TaniTrust QC'],
+          summary: 'Preview estimasi pembayaran QC',
+          description: 'Menghitung preview estimasi pembayaran berdasarkan grade breakdown dan potongan. Endpoint ini tidak menyimpan data — hanya menghitung total. Harga per unit diambil dari price list aktif untuk komoditas terkait. Membutuhkan permission qc_results.create.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'saleId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID penjualan.',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['grade_breakdowns'],
+                  properties: {
+                    grade_breakdowns: {
+                      type: 'array',
+                      minItems: 1,
+                      items: {
+                        type: 'object',
+                        required: ['weight'],
+                        properties: {
+                          grade_id: { type: 'string' },
+                          grade_code: { type: 'string' },
+                          grade_name: { type: 'string' },
+                          weight: { type: 'number', minimum: 0 },
+                        },
+                      },
+                    },
+                    deduction_amount: { type: 'number', minimum: 0 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Estimasi pembayaran berhasil dihitung.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              sale_id: { type: 'string', format: 'uuid' },
+                              price_list_id: { type: 'string', format: 'uuid', nullable: true },
+                              commodity_name: { type: 'string' },
+                              unit: { type: 'string' },
+                              subtotal_amount: { type: 'number' },
+                              deduction_amount: { type: 'number' },
+                              total_estimated_amount: { type: 'number' },
+                              breakdown: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    grade_id: { type: 'string', nullable: true },
+                                    grade_name: { type: 'string' },
+                                    grade_code: { type: 'string' },
+                                    weight: { type: 'number' },
+                                    price_per_unit: { type: 'number' },
+                                    estimated_amount: { type: 'number' },
+                                    is_reject: { type: 'boolean' },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Tidak ada price list aktif untuk komoditas ini.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NO_PRICE_LIST', message: 'Tidak ada price list aktif untuk komoditas ini.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid — total berat melebihi berat diterima.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'Total berat grade breakdown melebihi berat diterima.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       '/qc/{saleId}/submit': {
         post: {
-          tags: ['QC'],
+          tags: ['QC', 'Mobile QC / TaniTrust QC'],
           summary: 'Kirim hasil QC',
           description:
-            'Mengirimkan hasil quality control. Validasi: total berat grade breakdown tidak boleh melebihi berat diterima. Mengubah status penjualan menjadi QC_SELESAI dan status QC menjadi DIKIRIM.',
+            'Mengirimkan hasil quality control final. Endpoint ini otomatis melakukan lookup harga dari price list aktif, menghitung total pembayaran, transisi submission ke MENUNGGU_PEMBAYARAN, membuat mutasi wallet HASIL_PENJUALAN, dan mengirim notifikasi ke petani. Validasi: total berat grade breakdown tidak boleh melebihi berat diterima. Mengubah status penjualan menjadi QC_SELESAI dan status QC menjadi DIKIRIM.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -3202,16 +3938,27 @@ export async function GET() {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['items', 'grade_breakdowns'],
+                  required: ['grade_breakdowns'],
                   properties: {
-                    final_grade_code: { type: 'string' },
-                    recommended_grade_code: { type: 'string' },
-                    total_weight_checked: { type: 'number', minimum: 0 },
-                    final_accepted_weight: { type: 'number', minimum: 0 },
-                    total_rejected_weight: { type: 'number', minimum: 0 },
-                    notes: { type: 'string' },
+                    parameter_values: {
+                      type: 'array',
+                      description: 'Alias untuk items — nilai parameter QC.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          qc_template_item_id: { type: 'string', format: 'uuid' },
+                          parameter_id: { type: 'string', format: 'uuid', description: 'Alias untuk qc_template_item_id.' },
+                          value_text: { type: 'string' },
+                          value_number: { type: 'number' },
+                          value_json: { type: 'object' },
+                          notes: { type: 'string' },
+                          proof_file_id: { type: 'string', format: 'uuid' },
+                        },
+                      },
+                    },
                     items: {
                       type: 'array',
+                      description: 'Nilai parameter QC (kompatibilitas lama).',
                       items: {
                         type: 'object',
                         required: ['qc_template_item_id'],
@@ -3230,15 +3977,26 @@ export async function GET() {
                       minItems: 1,
                       items: {
                         type: 'object',
-                        required: ['grade_name', 'grade_code', 'weight'],
+                        required: ['weight'],
                         properties: {
-                          grade_name: { type: 'string', example: 'Grade A' },
-                          grade_code: { type: 'string', example: 'A' },
-                          weight: { type: 'number', minimum: 0, example: 450 },
+                          grade_id: { type: 'string', description: 'PriceListItem id — jika diisi, harga akan diambil dari price list.' },
+                          grade_code: { type: 'string' },
+                          grade_name: { type: 'string' },
+                          weight: { type: 'number', minimum: 0 },
                           reason: { type: 'string' },
                         },
                       },
                     },
+                    qc_photo_file_ids: {
+                      type: 'array',
+                      items: { type: 'string', format: 'uuid' },
+                      description: 'File IDs foto bukti QC.',
+                    },
+                    deduction_amount: { type: 'number', minimum: 0 },
+                    final_grade_code: { type: 'string' },
+                    recommended_grade_code: { type: 'string' },
+                    overall_notes: { type: 'string' },
+                    notes: { type: 'string' },
                   },
                 },
               },
@@ -3246,7 +4004,7 @@ export async function GET() {
           },
           responses: {
             '200': {
-              description: 'Hasil QC berhasil dikirim',
+              description: 'Hasil QC berhasil dikirim beserta estimasi pembayaran.',
               content: {
                 'application/json': {
                   schema: {
@@ -3255,7 +4013,64 @@ export async function GET() {
                       {
                         type: 'object',
                         properties: {
-                          data: { $ref: '#/components/schemas/QcResult' },
+                          data: {
+                            type: 'object',
+                            properties: {
+                              qc_result: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  status: { type: 'string' },
+                                  submitted_at: { type: 'string', format: 'date-time' },
+                                  final_grade_code: { type: 'string', nullable: true },
+                                  final_accepted_weight: { type: 'number', nullable: true },
+                                  total_rejected_weight: { type: 'number', nullable: true },
+                                  items: {
+                                    type: 'array',
+                                    items: { type: 'object' },
+                                  },
+                                  grade_breakdowns: {
+                                    type: 'array',
+                                    items: { type: 'object' },
+                                  },
+                                },
+                              },
+                              submission: {
+                                type: 'object',
+                                properties: {
+                                  id: { type: 'string', format: 'uuid' },
+                                  sale_number: { type: 'string' },
+                                  batch_number: { type: 'string' },
+                                  status: { type: 'string' },
+                                },
+                              },
+                              payment_estimation: {
+                                type: 'object',
+                                properties: {
+                                  subtotal_amount: { type: 'number' },
+                                  deduction_amount: { type: 'number' },
+                                  total_estimated_amount: { type: 'number' },
+                                  payment_status: { type: 'string' },
+                                  payment_status_label: { type: 'string' },
+                                  breakdown: {
+                                    type: 'array',
+                                    items: {
+                                      type: 'object',
+                                      properties: {
+                                        grade_id: { type: 'string', nullable: true },
+                                        grade_name: { type: 'string' },
+                                        grade_code: { type: 'string' },
+                                        weight: { type: 'number' },
+                                        price_per_unit: { type: 'number' },
+                                        estimated_amount: { type: 'number' },
+                                        is_reject: { type: 'boolean' },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
                         },
                       },
                     ],
@@ -4575,6 +5390,74 @@ export async function GET() {
                           data: {
                             type: 'array',
                             items: { $ref: '#/components/schemas/AuditLog' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+
+      // ==================== Mobile QC / TaniTrust QC ====================
+      '/mobile-qc/summary': {
+        get: {
+          tags: ['Mobile QC / TaniTrust QC'],
+          summary: 'Ringkasan mobile QC',
+          description: 'Mengembalikan ringkasan aktivitas quality control harian untuk aplikasi mobile QC officer: jumlah setoran hari ini, antrian yang menunggu QC, QC yang sedang diproses, QC selesai, dan aktivitas terkini. Membutuhkan permission qc_results.view.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'date',
+              in: 'query',
+              schema: { type: 'string', format: 'date', example: '2026-07-11' },
+              description: 'Tanggal filter (format YYYY-MM-DD). Default hari ini.',
+            },
+            {
+              name: 'cooperative_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Opsional — filter berdasarkan koperasi. Jika tidak diisi, koperasi aktif dari sesi digunakan.',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Ringkasan mobile QC.',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              date: { type: 'string', format: 'date' },
+                              setoran_hari_ini: { type: 'integer', example: 12 },
+                              menunggu_qc: { type: 'integer', example: 5 },
+                              qc_diproses: { type: 'integer', example: 2 },
+                              qc_selesai: { type: 'integer', example: 8 },
+                              recent_activities: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string' },
+                                    type: { type: 'string', example: 'QC_SUBMITTED' },
+                                    title: { type: 'string' },
+                                    description: { type: 'string' },
+                                    created_at: { type: 'string', format: 'date-time' },
+                                  },
+                                },
+                              },
+                            },
                           },
                         },
                       },
@@ -6916,6 +7799,11 @@ export async function GET() {
               },
             },
           },
+        },
+        QcTemplateInputType: {
+          type: 'string',
+          enum: ['ANGKA', 'PERSENTASE', 'PILIHAN', 'CHECKLIST', 'YA_TIDAK', 'FOTO', 'CATATAN'],
+          description: 'Tipe input parameter QC. ANGKA=number, PERSENTASE=percentage, PILIHAN=dropdown, CHECKLIST=multiple checkbox, YA_TIDAK=pass/fail, FOTO=photo upload, CATATAN=free text.',
         },
       },
       responses: {

@@ -23,5 +23,17 @@ export const createFarmerSchema = z.object({
   verification_status: z.string().optional(),
 })
 
+export const quickCreateFarmerSchema = z.object({
+  name: z.string().min(1, 'Nama petani wajib diisi.'),
+  phone: z.string().min(8, 'Nomor telepon minimal 8 digit.').max(20),
+  village: z.string().optional(),
+  address: z.string().optional(),
+  nik: z.string().optional(),
+  main_commodity: z.string().optional(),
+  cooperative_id: z.string().optional(),
+  seller_type: sellerTypeEnum.optional(),
+})
+
 export type CreateFarmerInput = z.infer<typeof createFarmerSchema>
+export type QuickCreateFarmerInput = z.infer<typeof quickCreateFarmerSchema>
 export type SellerType = z.infer<typeof sellerTypeEnum>

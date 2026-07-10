@@ -50,6 +50,19 @@ export async function generatePayoutNumber(date?: Date): Promise<string> {
   return `BAYAR-${dateStr}-${String(current + 1).padStart(4, '0')}`
 }
 
+export async function generateFarmerNumber(cooperativeCode: string): Promise<string> {
+  const code = cooperativeCode.toUpperCase()
+  const pattern = `${code}-%`
+
+  const result = await prisma.$queryRaw<{ max_num: string | null }[]>`
+    SELECT MAX(right(farmer_number, 6)) as max_num
+    FROM "KaryaTani_farmers"
+    WHERE farmer_number LIKE ${pattern}
+  `
+  const current = parseInt(result[0]?.max_num || '0', 10)
+  return `${code}-${String(current + 1).padStart(6, '0')}`
+}
+
 export async function generateDisputeNumber(date?: Date): Promise<string> {
   const d = date || new Date()
   const dateStr = formatDate(d)

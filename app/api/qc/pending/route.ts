@@ -33,9 +33,15 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           farmer: { select: { id: true, name: true, farmer_number: true } },
-          commodity: { select: { id: true, name: true, code: true } },
+          commodity: { select: { id: true, name: true, code: true, default_unit: true, image_url: true } },
           cooperative: { select: { id: true, name: true } },
           commodity_variant: { select: { id: true, name: true } },
+          photos: {
+            where: { photo_type: 'FOTO_PENERIMAAN' },
+            include: { file: { select: { file_url: true } } },
+            take: 1,
+            orderBy: { created_at: 'asc' },
+          },
         },
         skip,
         take: limit,
@@ -44,7 +50,13 @@ export async function GET(request: NextRequest) {
       prisma.farmerSale.count({ where }),
     ])
 
-    return successResponse(sales, {
+    const items = sales.map((s) => ({
+      ...s,
+      intake_photo_url: s.photos?.[0]?.file?.file_url || null,
+      photos: undefined,
+    }))
+
+    return successResponse(items, {
       total,
       page,
       limit,

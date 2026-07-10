@@ -31,17 +31,28 @@ export async function POST(
             items: { orderBy: { sort_order: 'asc' } },
           },
         },
+        qc_results: {
+          where: { status: 'DRAFT' },
+          orderBy: { created_at: 'desc' },
+          take: 1,
+          include: {
+            items: true,
+            grade_breakdowns: true,
+          },
+        },
       },
     })
 
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
 
-    if (!['MENUNGGU_QC', 'DITERIMA_KOPERASI'].includes(sale.status)) {
+    if (
+      !['MENUNGGU_QC', 'DITERIMA_KOPERASI', 'QC_DIPROSES'].includes(sale.status)
+    ) {
       return errorResponse(
         'INVALID_STATUS',
         'Penjualan tidak dalam status yang valid untuk memulai QC.',
         undefined,
-        400
+        409
       )
     }
 
@@ -50,8 +61,23 @@ export async function POST(
         'NO_TEMPLATE',
         'Belum ada template QC untuk penjualan ini.',
         undefined,
-        400
+        409
       )
+    }
+
+    const existingDraft = sale.qc_results[0]
+    if (existingDraft) {
+      if (sale.status !== 'QC_DIPROSES') {
+        await prisma.farmerSale.update({
+          where: { id: saleId },
+          data: { status: 'QC_DIPROSES' },
+        })
+      }
+      const merged = {
+        ...existingDraft,
+        qc_template: sale.qc_template,
+      }
+      return successResponse(merged)
     }
 
     const result = await prisma.$transaction(async (tx) => {
