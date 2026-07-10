@@ -355,7 +355,13 @@ export default function PenjualanPage() {
                     })}
                   >
                     <SelectTrigger id="cooperative_id">
-                      <SelectValue placeholder="Pilih koperasi" />
+                      <SelectValue placeholder="Pilih koperasi">
+                        {(v: string | null) => {
+                          if (!v) return 'Pilih koperasi';
+                          const item = cooperatives.find(c => c.id === v);
+                          return item ? `${item.code} - ${item.name}` : v;
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {cooperatives.map((c) => (
@@ -378,7 +384,13 @@ export default function PenjualanPage() {
                     })}
                   >
                     <SelectTrigger id="farmer_id">
-                      <SelectValue placeholder="Pilih petani" />
+                      <SelectValue placeholder="Pilih petani">
+                        {(v: string | null) => {
+                          if (!v) return 'Pilih petani';
+                          const item = farmers.find(f => f.id === v);
+                          return item ? `${item.farmer_number} - ${item.name}` : v;
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {farmers.map((f) => (
@@ -400,7 +412,14 @@ export default function PenjualanPage() {
                     })}
                   >
                     <SelectTrigger id="representative_id">
-                      <SelectValue placeholder="Pilih pengantar" />
+                      <SelectValue placeholder="Pilih pengantar">
+                        {(v: string | null) => {
+                          if (!v) return 'Pilih pengantar';
+                          if (v === 'NONE') return 'Tidak ada pengantar';
+                          const item = representatives.find(r => r.id === v);
+                          return item ? `${item.name} (${item.relationship_type})` : v;
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="NONE">Tidak ada pengantar</SelectItem>
@@ -429,7 +448,13 @@ export default function PenjualanPage() {
                     })}
                   >
                     <SelectTrigger id="commodity_id">
-                      <SelectValue placeholder="Pilih komoditas" />
+                      <SelectValue placeholder="Pilih komoditas">
+                        {(v: string | null) => {
+                          if (!v) return 'Pilih komoditas';
+                          const item = commodities.find(c => c.id === v);
+                          return item ? `${item.code} - ${item.name}` : v;
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {commodities.map((c) => (
@@ -452,7 +477,14 @@ export default function PenjualanPage() {
                       })}
                     >
                       <SelectTrigger id="commodity_variant_id">
-                        <SelectValue placeholder="Pilih varian" />
+                        <SelectValue placeholder="Pilih varian">
+                          {(v: string | null) => {
+                            if (!v) return 'Pilih varian';
+                            if (v === 'NONE') return 'Tanpa varian';
+                            const item = variants.find(vr => vr.id === v);
+                            return item ? `${item.code} - ${item.name}` : v;
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="NONE">Tanpa varian</SelectItem>

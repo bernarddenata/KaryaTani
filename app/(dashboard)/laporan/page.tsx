@@ -253,7 +253,13 @@ function ReportTab({ type, cooperatives }: { type: ReportType; cooperatives: Coo
               onValueChange={(v) => setCooperativeId(v === 'ALL' ? '' : (v ?? ''))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Semua Koperasi" />
+                <SelectValue placeholder="Semua Koperasi">
+                  {(v: string | null) => {
+                    if (!v || v === 'ALL') return 'Semua Koperasi';
+                    const item = cooperatives.find(c => c.id === v);
+                    return item ? item.name : v;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Semua Koperasi</SelectItem>

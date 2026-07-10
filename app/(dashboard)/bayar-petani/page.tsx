@@ -243,7 +243,13 @@ export default function BayarPetaniPage() {
                 })}
               >
                 <SelectTrigger id="farmer_id">
-                  <SelectValue placeholder="Pilih petani" />
+                  <SelectValue placeholder="Pilih petani">
+                    {(v: string | null) => {
+                      if (!v || v === 'NONE') return 'Pilih petani';
+                      const item = farmers.find(f => f.id === v);
+                      return item ? `${item.farmer_number} - ${item.name}` : v;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="NONE" disabled>Pilih petani</SelectItem>

@@ -212,7 +212,13 @@ export default function KeberatanPage() {
                   onValueChange={(v) => setSelectedSaleId(v === 'NONE' ? '' : (v ?? ''))}
                 >
                   <SelectTrigger id="sale_id">
-                    <SelectValue placeholder="Pilih penjualan" />
+                    <SelectValue placeholder="Pilih penjualan">
+                      {(v: string | null) => {
+                        if (!v || v === 'NONE') return 'Pilih penjualan';
+                        const item = sales.find(s => s.id === v);
+                        return item ? `${item.sale_number} - ${item.farmer?.name || 'Tanpa nama'}` : v;
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NONE" disabled>Pilih penjualan</SelectItem>

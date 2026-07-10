@@ -194,7 +194,13 @@ export default function RiwayatSaldoPage() {
           <Label className="text-sm text-muted-foreground mb-1 block">Petani</Label>
           <Select value={farmerId || 'ALL'} onValueChange={(v) => setFarmerId(v === 'ALL' ? '' : (v ?? ''))}>
             <SelectTrigger>
-              <SelectValue placeholder="Semua Petani" />
+              <SelectValue placeholder="Semua Petani">
+                {(v: string | null) => {
+                  if (!v || v === 'ALL') return 'Semua Petani';
+                  const item = farmers.find(f => f.id === v);
+                  return item ? item.name : v;
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Semua Petani</SelectItem>

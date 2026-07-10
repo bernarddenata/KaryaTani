@@ -200,7 +200,13 @@ export default function PengantarPage() {
                   onValueChange={(v) => setFormData({ ...formData, farmer_id: v ?? '' })}
                 >
                   <SelectTrigger id="farmer_id">
-                    <SelectValue placeholder="Pilih petani" />
+                    <SelectValue placeholder="Pilih petani">
+                      {(v: string | null) => {
+                        if (!v) return 'Pilih petani';
+                        const item = farmers.find(f => f.id === v);
+                        return item ? `${item.farmer_number} - ${item.name}` : v;
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {farmers.map((f) => (

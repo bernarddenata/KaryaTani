@@ -223,7 +223,13 @@ export default function RiwayatQCPage() {
             <Label className="text-sm">Petani</Label>
             <Select value={filterFarmer} onValueChange={(v) => setFilterFarmer(v ?? "")}>
               <SelectTrigger>
-                <SelectValue placeholder="Semua petani" />
+                <SelectValue placeholder="Semua petani">
+                  {(v: string | null) => {
+                    if (!v) return 'Semua petani';
+                    const item = farmers.find(f => f.id === v);
+                    return item ? item.name : v;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {farmers.map((f) => (
@@ -239,7 +245,13 @@ export default function RiwayatQCPage() {
             <Label className="text-sm">Komoditas</Label>
             <Select value={filterCommodity} onValueChange={(v) => setFilterCommodity(v ?? "")}>
               <SelectTrigger>
-                <SelectValue placeholder="Semua komoditas" />
+                <SelectValue placeholder="Semua komoditas">
+                  {(v: string | null) => {
+                    if (!v) return 'Semua komoditas';
+                    const item = commodities.find(c => c.id === v);
+                    return item ? item.name : v;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {commodities.map((c) => (

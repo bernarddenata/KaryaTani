@@ -218,7 +218,13 @@ export default function DaftarHargaPage() {
                 onValueChange={(v) => setFormData({ ...formData, cooperative_id: v ?? '' })}
               >
                 <SelectTrigger id="cooperative_id">
-                  <SelectValue placeholder="Pilih koperasi" />
+                  <SelectValue placeholder="Pilih koperasi">
+                    {(v: string | null) => {
+                      if (!v) return 'Pilih koperasi';
+                      const item = cooperatives.find(c => c.id === v);
+                      return item ? `${item.code} - ${item.name}` : v;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {cooperatives.map((c) => (

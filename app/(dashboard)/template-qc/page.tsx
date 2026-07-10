@@ -267,7 +267,13 @@ export default function TemplateQCPage() {
                 onValueChange={(v) => setFormData({ ...formData, cooperative_id: v ?? '' })}
               >
                 <SelectTrigger id="cooperative_id">
-                  <SelectValue placeholder="Pilih koperasi" />
+                  <SelectValue placeholder="Pilih koperasi">
+                    {(v: string | null) => {
+                      if (!v) return 'Pilih koperasi';
+                      const item = cooperatives.find(c => c.id === v);
+                      return item ? `${item.code} - ${item.name}` : v;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {cooperatives.map((c) => (
@@ -286,7 +292,13 @@ export default function TemplateQCPage() {
                 onValueChange={(v) => setFormData({ ...formData, commodity_id: v ?? '', commodity_variant_id: '' })}
               >
                 <SelectTrigger id="commodity_id">
-                  <SelectValue placeholder="Pilih komoditas" />
+                  <SelectValue placeholder="Pilih komoditas">
+                    {(v: string | null) => {
+                      if (!v) return 'Pilih komoditas';
+                      const item = commodities.find(c => c.id === v);
+                      return item ? `${item.code} - ${item.name}` : v;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {commodities.map((c) => (
@@ -306,7 +318,13 @@ export default function TemplateQCPage() {
                   onValueChange={(v) => setFormData({ ...formData, commodity_variant_id: v ?? '' })}
                 >
                   <SelectTrigger id="commodity_variant_id">
-                    <SelectValue placeholder="Pilih varian" />
+                    <SelectValue placeholder="Pilih varian">
+                      {(v: string | null) => {
+                        if (!v) return 'Pilih varian';
+                        const item = variants.find(vr => vr.id === v);
+                        return item ? `${item.code} - ${item.name}` : v;
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {variants.map((v) => (
