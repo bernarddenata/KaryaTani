@@ -12,7 +12,7 @@ export function DashboardShell({
 }: {
   children: React.ReactNode
   title: string
-  description: string
+  description?: string
   permission: string
 }) {
   const { user, loading, hasPermission } = useAuth()

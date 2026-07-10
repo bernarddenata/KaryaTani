@@ -375,6 +375,7 @@ model FarmerSale {
   notes                String?
   received_by_user_id  String?
   received_at          DateTime?
+  calculated_at        DateTime?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 

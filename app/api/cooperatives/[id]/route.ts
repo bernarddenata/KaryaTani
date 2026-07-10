@@ -2,11 +2,14 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { createCooperativeSchema } from '@/lib/validations/cooperative'
+import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
   successResponse,
   unauthorizedResponse,
   forbiddenResponse,
   notFoundResponse,
+  validationErrorResponse,
   serverErrorResponse,
 } from '@/lib/api/response'
 
@@ -28,6 +31,58 @@ export async function GET(
     if (!cooperative) return notFoundResponse('Koperasi tidak ditemukan.')
 
     return successResponse(cooperative)
+  } catch (error) {
+    console.error(error)
+    return serverErrorResponse()
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getCurrentUser(request)
+    if (!user) return unauthorizedResponse()
+    if (!hasPermission(user, 'cooperatives.edit')) return forbiddenResponse()
+
+    const { id } = await params
+
+    const existing = await prisma.cooperative.findUnique({
+      where: { id },
+    })
+
+    if (!existing) return notFoundResponse('Koperasi tidak ditemukan.')
+
+    const body = await request.json()
+    const parsed = createCooperativeSchema.partial().safeParse(body)
+    if (!parsed.success) {
+      return validationErrorResponse(
+        parsed.error.issues.map((e) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        }))
+      )
+    }
+
+    const updated = await prisma.cooperative.update({
+      where: { id },
+      data: parsed.data,
+    })
+
+    const meta = getRequestMeta(request)
+    await createAuditLog({
+      actorUserId: user.id,
+      entityType: 'Cooperative',
+      entityId: id,
+      action: 'UPDATE',
+      beforeJson: existing,
+      afterJson: updated,
+      sourceClient: 'web',
+      ...meta,
+    })
+
+    return successResponse(updated)
   } catch (error) {
     console.error(error)
     return serverErrorResponse()

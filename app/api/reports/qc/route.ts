@@ -1,0 +1,61 @@
+import { NextRequest } from 'next/server'
+import prisma from '@/lib/prisma/client'
+import { getCurrentUser } from '@/lib/auth/session'
+import { hasPermission } from '@/lib/rbac/permissions'
+import {
+  successResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  serverErrorResponse,
+} from '@/lib/api/response'
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request)
+    if (!user) return unauthorizedResponse()
+    if (!hasPermission(user, 'reports.view')) return forbiddenResponse()
+
+    const { searchParams } = new URL(request.url)
+    const date_from = searchParams.get('date_from')
+    const date_to = searchParams.get('date_to')
+
+    const where: any = {}
+    if (date_from || date_to) {
+      where.created_at = {}
+      if (date_from) where.created_at.gte = new Date(date_from)
+      if (date_to) where.created_at.lte = new Date(date_to + 'T23:59:59.999Z')
+    }
+
+    const [results, summary] = await Promise.all([
+      prisma.qcResult.findMany({
+        where,
+        include: {
+          farmer: { select: { id: true, name: true } },
+          farmer_sale: { select: { id: true, sale_number: true, batch_number: true } },
+          qc_officer: { select: { id: true, name: true } },
+          cooperative: { select: { id: true, name: true } },
+        },
+        orderBy: { created_at: 'desc' },
+        take: 500,
+      }),
+      prisma.qcResult.aggregate({
+        where,
+        _sum: { total_weight_checked: true, final_accepted_weight: true, total_rejected_weight: true },
+        _count: true,
+      }),
+    ])
+
+    return successResponse({
+      results,
+      summary: {
+        total_count: summary._count,
+        total_weight_checked: summary._sum.total_weight_checked || 0,
+        total_accepted: summary._sum.final_accepted_weight || 0,
+        total_rejected: summary._sum.total_rejected_weight || 0,
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    return serverErrorResponse()
+  }
+}
