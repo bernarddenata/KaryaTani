@@ -2,10 +2,12 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope, canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
   forbiddenResponse,
+  notFoundResponse,
   serverErrorResponse,
 } from '@/lib/api/response'
 
@@ -36,8 +38,13 @@ export async function GET(request: NextRequest) {
     const cooperativeId = searchParams.get('cooperative_id')
     const { start, end, iso } = parseDate(searchParams.get('date'))
 
-    const scopeWhere: any = {}
-    if (cooperativeId) scopeWhere.cooperative_id = cooperativeId
+    if (cooperativeId && !(await canAccessCooperative(user, cooperativeId))) {
+      return notFoundResponse('Koperasi tidak ditemukan.')
+    }
+
+    const baseScope: any = {}
+    if (cooperativeId) baseScope.cooperative_id = cooperativeId
+    const scopeWhere = await applyCooperativeScope(baseScope, user)
 
     const dayWhere = { ...scopeWhere, created_at: { gte: start, lte: end } }
 
@@ -68,7 +75,7 @@ export async function GET(request: NextRequest) {
         }),
         prisma.qcResult.findMany({
           where: {
-            ...(cooperativeId ? { cooperative_id: cooperativeId } : {}),
+            ...scopeWhere,
             status: 'DIKIRIM',
             submitted_at: { gte: start, lte: end },
           },

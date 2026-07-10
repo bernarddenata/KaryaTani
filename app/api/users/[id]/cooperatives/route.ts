@@ -16,14 +16,14 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser(request)
     if (!user) return unauthorizedResponse()
     if (!hasPermission(user, 'users.view')) return forbiddenResponse()
 
-    const { userId } = await params
+    const { id: userId } = await params
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -47,7 +47,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser(request)
@@ -56,7 +56,7 @@ export async function POST(
       return forbiddenResponse()
     }
 
-    const { userId } = await params
+    const { id: userId } = await params
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true },
