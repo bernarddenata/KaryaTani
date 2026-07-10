@@ -8,6 +8,7 @@ async function main() {
 
   // 0. Clean up in FK-safe order
   await prisma.auditLog.deleteMany()
+  await prisma.notification.deleteMany()
   await prisma.farmerSalePhoto.deleteMany()
   await prisma.qcGradeBreakdown.deleteMany()
   await prisma.qcResultItem.deleteMany()
@@ -22,7 +23,9 @@ async function main() {
   await prisma.priceListItem.deleteMany()
   await prisma.priceList.deleteMany()
   await prisma.farmerRepresentative.deleteMany()
+  await prisma.farmerSource.deleteMany()
   await prisma.farmer.deleteMany()
+  await prisma.userCooperative.deleteMany()
   await prisma.cooperative.deleteMany()
   await prisma.commodityVariant.deleteMany()
   await prisma.commodity.deleteMany()
