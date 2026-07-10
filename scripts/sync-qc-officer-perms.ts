@@ -6,6 +6,7 @@
 import prisma from '../lib/prisma/client'
 
 const EXTRA_PERMISSIONS = [
+  'cooperatives.view',
   'farmers.create',
   'farmer_sales.create',
   'farmer_sales.edit',

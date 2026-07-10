@@ -140,6 +140,7 @@ async function main() {
       description: 'Petugas pemeriksaan kualitas (dapat digunakan untuk aplikasi TaniTrust Mobile QC)',
       permissions: [
         'dashboard.view',
+        'cooperatives.view',
         'farmers.view', 'farmers.create',
         'farmer_representatives.view',
         'commodities.view', 'price_lists.view', 'qc_templates.view',
