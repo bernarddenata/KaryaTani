@@ -10,12 +10,23 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 
+export interface AccessibleCooperative {
+  id: string
+  code: string
+  name: string
+  status: string
+  assignment_type: string
+  is_primary: boolean
+}
+
 export interface AuthUser {
   id: string
   name: string
   email: string
   status: string
   permissions: string[]
+  accessible_cooperatives?: AccessibleCooperative[]
+  is_global_access?: boolean
 }
 
 interface AuthContextValue {

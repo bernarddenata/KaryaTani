@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { updatePayoutSchema } from '@/lib/validations/payout'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -36,6 +37,8 @@ export async function GET(
     })
 
     if (!payout) return notFoundResponse('Pembayaran tidak ditemukan.')
+    if (!(await canAccessCooperative(user, payout.cooperative_id)))
+      return notFoundResponse('Pembayaran tidak ditemukan.')
 
     return successResponse(payout)
   } catch (error) {

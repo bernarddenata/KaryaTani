@@ -21,6 +21,7 @@ import { ImageUpload } from '@/components/shared/image-upload'
 import { toast } from 'sonner'
 import { Plus, Pencil, Eye, User } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/components/layout/auth-provider'
 
 interface Farmer {
   id: string
@@ -65,19 +66,27 @@ const VERIFICATION_OPTIONS = [
 ] as const
 
 export default function PetaniPage() {
+  const { user } = useAuth()
   const [allData, setAllData] = useState<Farmer[]>([])
   const [data, setData] = useState<Farmer[]>([])
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([])
+  const [selectedCoopId, setSelectedCoopId] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Farmer | null>(null)
   const [formData, setFormData] = useState(INITIAL_FORM)
   const [saving, setSaving] = useState(false)
 
+  const accessibleCoops = user?.accessible_cooperatives || []
+  const isGlobal = user?.is_global_access || false
+
   const fetchData = useCallback(async () => {
     setLoading(true)
+    const url = selectedCoopId && selectedCoopId !== 'all'
+      ? `/api/farmers?cooperative_id=${selectedCoopId}`
+      : '/api/farmers'
     const [farmersRes, coopsRes] = await Promise.all([
-      apiFetch('/api/farmers'),
+      apiFetch(url),
       apiFetch('/api/cooperatives'),
     ])
     if (farmersRes.success) {
@@ -88,9 +97,15 @@ export default function PetaniPage() {
       setCooperatives(coopsRes.data)
     }
     setLoading(false)
-  }, [])
+  }, [selectedCoopId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    if (!isGlobal && accessibleCoops.length === 1 && selectedCoopId === 'all') {
+      setSelectedCoopId(accessibleCoops[0].id)
+    }
+  }, [isGlobal, accessibleCoops, selectedCoopId])
 
   const resetForm = () => setFormData(INITIAL_FORM)
 
@@ -198,7 +213,36 @@ export default function PetaniPage() {
       description="Kelola data pemilik hasil tani yang berhak menerima pembayaran dari koperasi."
       permission="farmers.view"
     >
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between items-end mb-4 gap-3 flex-wrap">
+        {(isGlobal || accessibleCoops.length > 1) && (
+          <div className="min-w-[280px]">
+            <Label className="text-xs">Pilih Koperasi</Label>
+            <Select value={selectedCoopId} onValueChange={(v) => setSelectedCoopId(v ?? 'all')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Koperasi">
+                  {(v: string | null) => {
+                    if (!v || v === 'all') return 'Semua Koperasi'
+                    const found = cooperatives.find((c) => c.id === v)
+                    return found ? `${found.code} - ${found.name}` : v
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Koperasi</SelectItem>
+                {(isGlobal ? cooperatives : cooperatives.filter((c) => accessibleCoops.some((a) => a.id === c.id))).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} - {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {!isGlobal && accessibleCoops.length === 1 && (
+          <div className="text-xs text-muted-foreground">
+            Data dibatasi pada koperasi: <strong>{accessibleCoops[0].name}</strong>
+          </div>
+        )}
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1" /> Tambah Petani
         </Button>

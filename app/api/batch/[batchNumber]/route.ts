@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -55,6 +56,8 @@ export async function GET(
     })
 
     if (!sale) return notFoundResponse('Batch tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Batch tidak ditemukan.')
 
     // Get wallet mutations and payouts for this sale's farmer
     const [walletMutations, payouts, auditLogs] = await Promise.all([

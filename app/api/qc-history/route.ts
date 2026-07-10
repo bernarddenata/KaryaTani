@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -41,9 +42,11 @@ export async function GET(request: NextRequest) {
       if (dateTo) where.submitted_at.lte = new Date(dateTo)
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [results, total] = await Promise.all([
       prisma.qcResult.findMany({
-        where,
+        where: scopedWhere,
         include: {
           farmer_sale: {
             select: {
@@ -63,7 +66,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { submitted_at: 'desc' },
       }),
-      prisma.qcResult.count({ where }),
+      prisma.qcResult.count({ where: scopedWhere }),
     ])
 
     return successResponse(results, {

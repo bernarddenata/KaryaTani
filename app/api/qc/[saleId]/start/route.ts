@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
   successResponse,
@@ -44,6 +45,8 @@ export async function POST(
     })
 
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     if (
       !['MENUNGGU_QC', 'DITERIMA_KOPERASI', 'QC_DIPROSES'].includes(sale.status)

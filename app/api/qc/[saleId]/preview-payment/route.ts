@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { previewPaymentSchema } from '@/lib/validations/qc-result'
 import { loadActivePriceListItems, resolveBreakdownAgainstPriceList } from '@/lib/qc/pricing'
 import {
@@ -37,6 +38,8 @@ export async function POST(
       },
     })
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     const body = await request.json()
     const parsed = previewPaymentSchema.safeParse(body)

@@ -235,7 +235,7 @@ async function main() {
   }
   console.log(`✅ ${userDefinitions.length} users seeded`)
 
-  // 4. Cooperative
+  // 4. Cooperatives
   const cooperative = await prisma.cooperative.upsert({
     where: { code: 'KOP-001' },
     update: { name: 'Koperasi Desa Merah Putih Sukamaju' },
@@ -246,7 +246,58 @@ async function main() {
       legal_number: 'BH/12345/2024',
     },
   })
-  console.log('✅ Cooperative seeded')
+  const cooperative2 = await prisma.cooperative.upsert({
+    where: { code: 'KOP-002' },
+    update: { name: 'Koperasi Desa Makmur Sentosa' },
+    create: {
+      code: 'KOP-002', name: 'Koperasi Desa Makmur Sentosa',
+      province: 'Jawa Barat', city: 'Bandung', district: 'Cikembar',
+      village: 'Makmur', address: 'Jl. Koperasi No. 2, Desa Makmur',
+      legal_number: 'BH/67890/2024',
+    },
+  })
+  console.log('✅ Cooperatives seeded (KOP-001, KOP-002)')
+
+  // 4b. User-Cooperative mapping
+  const userCooperativeMap = [
+    { email: 'manager@karyatani.local', assignments: [
+      { cooperative_id: cooperative.id, assignment_type: 'MANAGER', is_primary: true },
+      { cooperative_id: cooperative2.id, assignment_type: 'MANAGER', is_primary: false },
+    ]},
+    { email: 'supervisor.qc@karyatani.local', assignments: [
+      { cooperative_id: cooperative.id, assignment_type: 'SUPERVISOR_QC', is_primary: true },
+      { cooperative_id: cooperative2.id, assignment_type: 'SUPERVISOR_QC', is_primary: false },
+    ]},
+    { email: 'qc@karyatani.local', assignments: [
+      { cooperative_id: cooperative.id, assignment_type: 'PETUGAS_QC', is_primary: true },
+    ]},
+    { email: 'finance@karyatani.local', assignments: [
+      { cooperative_id: cooperative.id, assignment_type: 'STAFF_KEUANGAN', is_primary: true },
+    ]},
+    { email: 'koperasi@karyatani.local', assignments: [
+      { cooperative_id: cooperative.id, assignment_type: 'ADMIN_KOPERASI', is_primary: true },
+    ]},
+    { email: 'viewer@karyatani.local', assignments: [
+      { cooperative_id: cooperative2.id, assignment_type: 'VIEWER', is_primary: true },
+    ]},
+  ]
+  for (const map of userCooperativeMap) {
+    const u = users[map.email]
+    if (!u) continue
+    await prisma.userCooperative.deleteMany({ where: { user_id: u.id } })
+    for (const a of map.assignments) {
+      await prisma.userCooperative.create({
+        data: {
+          user_id: u.id,
+          cooperative_id: a.cooperative_id,
+          assignment_type: a.assignment_type,
+          is_primary: a.is_primary,
+          status: 'AKTIF',
+        },
+      })
+    }
+  }
+  console.log(`✅ User-cooperative mappings seeded (${userCooperativeMap.length} users)`)
 
   // 5. Commodities + Variants
   const commodityDefinitions = [
@@ -292,14 +343,14 @@ async function main() {
 
   // 6. Farmers + Representatives
   const farmerDefinitions = [
-    { farmer_number: 'PTN-001', name: 'Pak Budi Santoso', phone: '081234567001', seller_type: 'PEMILIK_LAHAN', village: 'Merah Putih', address: 'Jl. Sawah No. 1', reps: [
+    { farmer_number: 'PTN-001', name: 'Pak Budi Santoso', phone: '081234567001', seller_type: 'PEMILIK_LAHAN', village: 'Merah Putih', address: 'Jl. Sawah No. 1', cooperative_id: cooperative.id, reps: [
       { name: 'Andi', phone: '081234567011', relationship_type: 'PEGAWAI' },
     ]},
-    { farmer_number: 'PTN-002', name: 'Bu Sari Wijaya', phone: '081234567002', seller_type: 'PEMILIK_LAHAN', village: 'Sukamaju', address: 'Jl. Kebun No. 5', reps: [
+    { farmer_number: 'PTN-002', name: 'Bu Sari Wijaya', phone: '081234567002', seller_type: 'PEMILIK_LAHAN', village: 'Sukamaju', address: 'Jl. Kebun No. 5', cooperative_id: cooperative.id, reps: [
       { name: 'Rina', phone: '081234567012', relationship_type: 'KELUARGA' },
     ]},
-    { farmer_number: 'PTN-003', name: 'Pak Joko Prasetyo', phone: '081234567003', seller_type: 'PENGGARAP', village: 'Cikembar', address: 'Jl. Ladang No. 3', reps: [] },
-    { farmer_number: 'PTN-004', name: 'Bu Lina Marlina', phone: '081234567004', seller_type: 'PEMILIK_LAHAN', village: 'Sukamaju', address: 'Jl. Tani No. 7', reps: [] },
+    { farmer_number: 'PTN-003', name: 'Pak Joko Prasetyo', phone: '081234567003', seller_type: 'PENGGARAP', village: 'Cikembar', address: 'Jl. Ladang No. 3', cooperative_id: cooperative2.id, reps: [] },
+    { farmer_number: 'PTN-004', name: 'Bu Lina Marlina', phone: '081234567004', seller_type: 'PEMILIK_LAHAN', village: 'Makmur', address: 'Jl. Tani No. 7', cooperative_id: cooperative2.id, reps: [] },
   ]
 
   const farmers: Record<string, any> = {}
@@ -307,9 +358,9 @@ async function main() {
   for (const def of farmerDefinitions) {
     const farmer = await prisma.farmer.upsert({
       where: { farmer_number: def.farmer_number },
-      update: { name: def.name, phone: def.phone, seller_type: def.seller_type, village: def.village, address: def.address },
+      update: { name: def.name, phone: def.phone, seller_type: def.seller_type, village: def.village, address: def.address, cooperative_id: def.cooperative_id },
       create: {
-        cooperative_id: cooperative.id, farmer_number: def.farmer_number, name: def.name,
+        cooperative_id: def.cooperative_id, farmer_number: def.farmer_number, name: def.name,
         phone: def.phone, seller_type: def.seller_type, verification_status: 'TERVERIFIKASI',
         village: def.village, address: def.address,
       },

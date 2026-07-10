@@ -29,6 +29,7 @@ model User {
 
   // Relations
   user_roles            UserRole[]
+  user_cooperatives     UserCooperative[]
   received_sales        FarmerSale[]           @relation("ReceivedBySales")
   uploaded_sale_photos  FarmerSalePhoto[]      @relation("UploadedByPhotos")
   qc_results_as_officer QcResult[]             @relation("QcOfficerResults")
@@ -40,6 +41,25 @@ model User {
   audit_logs            AuditLog[]             @relation("ActorAuditLogs")
 
   @@map("KaryaTani_users")
+}
+
+model UserCooperative {
+  id              String   @id @default(uuid())
+  user_id         String
+  cooperative_id  String
+  assignment_type String   @default("PEGAWAI")
+  is_primary      Boolean  @default(false)
+  status          String   @default("AKTIF")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  user        User        @relation(fields: [user_id], references: [id])
+  cooperative Cooperative @relation(fields: [cooperative_id], references: [id])
+
+  @@unique([user_id, cooperative_id], name: "user_cooperative_unique")
+  @@index([user_id])
+  @@index([cooperative_id])
+  @@map("KaryaTani_user_cooperatives")
 }
 
 model Role {
@@ -122,15 +142,16 @@ model Cooperative {
   updated_at   DateTime @updatedAt
 
   // Relations
-  farmers          Farmer[]
-  price_lists      PriceList[]
-  qc_templates     QcTemplate[]
-  farmer_sales     FarmerSale[]
-  qc_results       QcResult[]
-  farmer_wallets   FarmerWallet[]
-  wallet_mutations FarmerWalletMutation[]
-  farmer_payouts   FarmerPayout[]
-  disputes         Dispute[]
+  farmers           Farmer[]
+  price_lists       PriceList[]
+  qc_templates      QcTemplate[]
+  farmer_sales      FarmerSale[]
+  qc_results        QcResult[]
+  farmer_wallets    FarmerWallet[]
+  wallet_mutations  FarmerWalletMutation[]
+  farmer_payouts    FarmerPayout[]
+  disputes          Dispute[]
+  user_cooperatives UserCooperative[]
 
   @@map("KaryaTani_cooperatives")
 }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createFarmerSchema } from '@/lib/validations/farmer'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -39,6 +40,8 @@ export async function GET(
     })
 
     if (!farmer) return notFoundResponse('Petani tidak ditemukan.')
+    if (!(await canAccessCooperative(user, farmer.cooperative_id)))
+      return notFoundResponse('Petani tidak ditemukan.')
 
     return successResponse(farmer)
   } catch (error) {
@@ -63,6 +66,8 @@ export async function PATCH(
     })
 
     if (!existing) return notFoundResponse('Petani tidak ditemukan.')
+    if (!(await canAccessCooperative(user, existing.cooperative_id)))
+      return notFoundResponse('Petani tidak ditemukan.')
 
     const body = await request.json()
     const parsed = createFarmerSchema.partial().safeParse(body)
@@ -73,6 +78,14 @@ export async function PATCH(
           message: e.message,
         }))
       )
+    }
+
+    if (
+      parsed.data.cooperative_id &&
+      parsed.data.cooperative_id !== existing.cooperative_id &&
+      !(await canAccessCooperative(user, parsed.data.cooperative_id))
+    ) {
+      return forbiddenResponse('Anda tidak memiliki akses ke koperasi ini.')
     }
 
     const updated = await prisma.farmer.update({

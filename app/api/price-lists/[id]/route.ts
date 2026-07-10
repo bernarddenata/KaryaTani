@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { updatePriceListSchema } from '@/lib/validations/price-list'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -39,6 +40,8 @@ export async function GET(
     })
 
     if (!priceList) return notFoundResponse('Daftar harga tidak ditemukan.')
+    if (!(await canAccessCooperative(user, priceList.cooperative_id)))
+      return notFoundResponse('Daftar harga tidak ditemukan.')
 
     return successResponse(priceList)
   } catch (error) {

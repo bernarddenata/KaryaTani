@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope, canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createDisputeSchema } from '@/lib/validations/dispute'
 import { generateDisputeNumber } from '@/lib/utils/numbering'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
@@ -38,9 +39,11 @@ export async function GET(request: NextRequest) {
       if (date_to) where.created_at.lte = new Date(date_to + 'T23:59:59.999Z')
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [disputes, total] = await Promise.all([
       prisma.dispute.findMany({
-        where,
+        where: scopedWhere,
         include: {
           farmer: { select: { id: true, name: true, farmer_number: true } },
           farmer_sale: { select: { id: true, sale_number: true, batch_number: true, total_amount: true } },
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.dispute.count({ where }),
+      prisma.dispute.count({ where: scopedWhere }),
     ])
 
     return successResponse(disputes, {
@@ -92,6 +95,8 @@ export async function POST(request: NextRequest) {
     })
 
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     const dispute_number = await generateDisputeNumber()
     const latestQcResult = sale.qc_results[0]

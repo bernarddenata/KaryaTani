@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { uploadFile } from '@/lib/upload/service'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -28,6 +29,8 @@ export async function GET(
 
     const sale = await prisma.farmerSale.findUnique({ where: { id } })
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     const photos = await prisma.farmerSalePhoto.findMany({
       where: { farmer_sale_id: id },

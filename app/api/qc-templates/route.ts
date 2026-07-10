@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import { createQcTemplateSchema } from '@/lib/validations/qc-template'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -31,9 +32,11 @@ export async function GET(request: NextRequest) {
     if (commodityId) where.commodity_id = commodityId
     if (status) where.status = status
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [templates, total] = await Promise.all([
       prisma.qcTemplate.findMany({
-        where,
+        where: scopedWhere,
         include: {
           cooperative: { select: { id: true, code: true, name: true } },
           commodity: { select: { id: true, code: true, name: true } },
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.qcTemplate.count({ where }),
+      prisma.qcTemplate.count({ where: scopedWhere }),
     ])
 
     return successResponse(templates, {

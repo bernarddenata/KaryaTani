@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import {
+  applyCooperativeScope,
+  canAccessCooperative,
+  getCooperativeAccess,
+} from '@/lib/rbac/cooperative-scope'
 import { createFarmerSchema, quickCreateFarmerSchema } from '@/lib/validations/farmer'
 import { generateFarmerNumber } from '@/lib/utils/numbering'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
@@ -61,10 +66,12 @@ export async function GET(request: NextRequest) {
       where.sources = { some: { main_commodity_id: commodityId } }
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [total, farmers] = await Promise.all([
-      prisma.farmer.count({ where }),
+      prisma.farmer.count({ where: scopedWhere }),
       prisma.farmer.findMany({
-        where,
+        where: scopedWhere,
         include: {
           cooperative: { select: { id: true, code: true, name: true } },
           sources: {
@@ -109,6 +116,14 @@ export async function POST(request: NextRequest) {
 
     const fullParsed = createFarmerSchema.safeParse(body)
     if (fullParsed.success) {
+      if (!(await canAccessCooperative(user, fullParsed.data.cooperative_id))) {
+        return errorResponse(
+          'FORBIDDEN',
+          'Anda tidak memiliki akses ke koperasi ini.',
+          undefined,
+          403
+        )
+      }
       const existing = await prisma.farmer.findFirst({ where: { phone: fullParsed.data.phone } })
       if (existing) {
         return errorResponse(
@@ -159,21 +174,48 @@ export async function POST(request: NextRequest) {
     }
 
     let cooperativeId = quickParsed.data.cooperative_id
+    const access = await getCooperativeAccess(user)
+
     if (!cooperativeId) {
-      const firstCoop = await prisma.cooperative.findFirst({
-        where: { status: 'ACTIVE' },
-        orderBy: { created_at: 'asc' },
-        select: { id: true },
-      })
-      if (!firstCoop) {
+      if (access.kind === 'SCOPED') {
+        if (access.ids.length === 0) {
+          return errorResponse(
+            'FORBIDDEN',
+            'Anda belum ditugaskan ke koperasi manapun.',
+            undefined,
+            403
+          )
+        }
+        const primary = await prisma.userCooperative.findFirst({
+          where: { user_id: user.id, status: 'AKTIF', is_primary: true },
+          select: { cooperative_id: true },
+        })
+        cooperativeId = primary?.cooperative_id || access.ids[0]
+      } else {
+        const firstCoop = await prisma.cooperative.findFirst({
+          where: { status: 'ACTIVE' },
+          orderBy: { created_at: 'asc' },
+          select: { id: true },
+        })
+        if (!firstCoop) {
+          return errorResponse(
+            'VALIDATION_ERROR',
+            'Tidak ada koperasi aktif. Sertakan cooperative_id.',
+            undefined,
+            422
+          )
+        }
+        cooperativeId = firstCoop.id
+      }
+    } else {
+      if (!(await canAccessCooperative(user, cooperativeId))) {
         return errorResponse(
-          'VALIDATION_ERROR',
-          'Tidak ada koperasi aktif. Sertakan cooperative_id.',
+          'FORBIDDEN',
+          'Anda tidak memiliki akses ke koperasi ini.',
           undefined,
-          422
+          403
         )
       }
-      cooperativeId = firstCoop.id
     }
 
     const coop = await prisma.cooperative.findUnique({

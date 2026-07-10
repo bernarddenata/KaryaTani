@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner'
 import { Plus, Eye, User } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/components/layout/auth-provider'
 
 interface Sale {
   id: string
@@ -95,6 +96,9 @@ const INITIAL_FORM = {
 }
 
 export default function PenjualanPage() {
+  const { user } = useAuth()
+  const accessibleCoops = user?.accessible_cooperatives || []
+  const isGlobal = user?.is_global_access || false
   const [data, setData] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -136,7 +140,14 @@ export default function PenjualanPage() {
         apiFetch<Commodity[]>('/api/commodities'),
       ])
       if (coopsRes.success && coopsRes.data) {
-        setCooperatives(Array.isArray(coopsRes.data) ? coopsRes.data : [])
+        const all = Array.isArray(coopsRes.data) ? coopsRes.data : []
+        const filtered = isGlobal
+          ? all
+          : all.filter((c: Cooperative) => accessibleCoops.some((a) => a.id === c.id))
+        setCooperatives(filtered)
+        if (filtered.length === 1 && !formData.cooperative_id) {
+          setFormData((f) => ({ ...f, cooperative_id: filtered[0].id }))
+        }
       }
       if (commsRes.success && commsRes.data) {
         setCommodities(Array.isArray(commsRes.data) ? commsRes.data : [])

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   submissionStatus,
   paymentStatusFromSale,
@@ -50,6 +51,8 @@ export async function GET(
     })
 
     if (!sale) return notFoundResponse('Batch tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Batch tidak ditemukan.')
 
     const status = submissionStatus(sale.status)
     const qc = sale.qc_results[0]

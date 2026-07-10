@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import { createPriceListSchema } from '@/lib/validations/price-list'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -29,9 +30,11 @@ export async function GET(request: NextRequest) {
     if (cooperativeId) where.cooperative_id = cooperativeId
     if (status) where.status = status
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [priceLists, total] = await Promise.all([
       prisma.priceList.findMany({
-        where,
+        where: scopedWhere,
         include: {
           cooperative: { select: { id: true, code: true, name: true } },
           _count: { select: { items: true } },
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.priceList.count({ where }),
+      prisma.priceList.count({ where: scopedWhere }),
     ])
 
     return successResponse(priceLists, {

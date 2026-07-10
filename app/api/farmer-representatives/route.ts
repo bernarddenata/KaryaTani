@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { getCooperativeAccess } from '@/lib/rbac/cooperative-scope'
 import { createRepresentativeSchema } from '@/lib/validations/representative'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -19,7 +20,14 @@ export async function GET(request: NextRequest) {
     if (!hasPermission(user, 'farmer_representatives.view'))
       return forbiddenResponse()
 
+    const where: any = {}
+    const access = await getCooperativeAccess(user)
+    if (access.kind === 'SCOPED') {
+      where.farmer = { ...(where.farmer || {}), cooperative_id: { in: access.ids } }
+    }
+
     const representatives = await prisma.farmerRepresentative.findMany({
+      where,
       include: {
         farmer: {
           select: {

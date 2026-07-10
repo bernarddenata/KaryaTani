@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -55,6 +56,8 @@ export async function GET(
     })
 
     if (!qcResult) return notFoundResponse('Hasil QC tidak ditemukan.')
+    if (!(await canAccessCooperative(user, qcResult.cooperative_id)))
+      return notFoundResponse('Hasil QC tidak ditemukan.')
 
     return successResponse(qcResult)
   } catch (error) {

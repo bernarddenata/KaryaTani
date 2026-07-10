@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { draftQcResultSchema } from '@/lib/validations/qc-result'
 import {
   successResponse,
@@ -35,6 +36,8 @@ export async function POST(
       },
     })
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
     const draft = sale.qc_results[0]
     if (!draft) {
       return errorResponse(

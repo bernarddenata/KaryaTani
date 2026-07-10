@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -31,8 +32,10 @@ export async function GET(request: NextRequest) {
     if (cooperativeId) where.cooperative_id = cooperativeId
     if (commodityId) where.commodity_id = commodityId
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const template = await prisma.qcTemplate.findFirst({
-      where,
+      where: scopedWhere,
       include: {
         cooperative: { select: { id: true, code: true, name: true } },
         commodity: { select: { id: true, code: true, name: true } },

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { resolveDisputeSchema } from '@/lib/validations/dispute'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -39,6 +40,8 @@ export async function PATCH(
       include: { farmer_sale: true },
     })
     if (!existing) return notFoundResponse('Keberatan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, existing.cooperative_id)))
+      return notFoundResponse('Keberatan tidak ditemukan.')
 
     const { manager_decision, resolution_note, status, adjustment_amount } = parsed.data
 

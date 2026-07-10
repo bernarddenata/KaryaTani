@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -44,6 +45,8 @@ export async function GET(
     })
 
     if (!wallet) return notFoundResponse('Dompet petani tidak ditemukan.')
+    if (!(await canAccessCooperative(user, wallet.cooperative_id)))
+      return notFoundResponse('Dompet petani tidak ditemukan.')
 
     return successResponse(wallet)
   } catch (error) {

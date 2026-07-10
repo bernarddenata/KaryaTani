@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -47,6 +48,8 @@ export async function GET(
     })
 
     if (!dispute) return notFoundResponse('Keberatan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, dispute.cooperative_id)))
+      return notFoundResponse('Keberatan tidak ditemukan.')
 
     return successResponse(dispute)
   } catch (error) {

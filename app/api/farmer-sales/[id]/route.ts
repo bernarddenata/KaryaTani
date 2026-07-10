@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { updateFarmerSaleSchema } from '@/lib/validations/farmer-sale'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -76,6 +77,8 @@ export async function GET(
     })
 
     if (!sale) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, sale.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     return successResponse(sale)
   } catch (error) {
@@ -100,6 +103,8 @@ export async function PATCH(
     })
 
     if (!existing) return notFoundResponse('Penjualan tidak ditemukan.')
+    if (!(await canAccessCooperative(user, existing.cooperative_id)))
+      return notFoundResponse('Penjualan tidak ditemukan.')
 
     if (existing.status !== 'DRAFT' && existing.status !== 'MENUNGGU_QC') {
       return errorResponse(

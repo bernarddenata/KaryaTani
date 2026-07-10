@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -26,9 +27,11 @@ export async function GET(request: NextRequest) {
       if (date_to) where.created_at.lte = new Date(date_to + 'T23:59:59.999Z')
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [disputes, summary] = await Promise.all([
       prisma.dispute.findMany({
-        where,
+        where: scopedWhere,
         include: {
           farmer: { select: { id: true, name: true } },
           farmer_sale: { select: { id: true, sale_number: true, batch_number: true } },
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.dispute.groupBy({
         by: ['status'],
-        where,
+        where: scopedWhere,
         _count: true,
       }),
     ])

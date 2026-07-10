@@ -18,6 +18,7 @@ import { apiFetch } from '@/lib/utils/api-client'
 import { formatDateTime, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { Plus, Pencil } from 'lucide-react'
+import { UserCooperativesManager } from '@/components/shared/user-cooperatives-manager'
 
 interface UserRole {
   role_id: string
@@ -314,6 +315,16 @@ export default function PenggunaPage() {
                 )}
               </div>
             </div>
+
+            {editingItem && (
+              <UserCooperativesManager userId={editingItem.id} />
+            )}
+
+            {!editingItem && (
+              <p className="text-xs text-muted-foreground">
+                Setelah pengguna dibuat, Anda dapat menetapkan koperasi yang dapat diakses lewat dialog edit.
+              </p>
+            )}
           </div>
 
           <DialogFooter>

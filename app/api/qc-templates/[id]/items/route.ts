@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createQcTemplateItemSchema } from '@/lib/validations/qc-template'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -26,6 +27,8 @@ export async function GET(
 
     const template = await prisma.qcTemplate.findUnique({ where: { id } })
     if (!template) return notFoundResponse('Template QC tidak ditemukan.')
+    if (!(await canAccessCooperative(user, template.cooperative_id)))
+      return notFoundResponse('Template QC tidak ditemukan.')
 
     const items = await prisma.qcTemplateItem.findMany({
       where: { qc_template_id: id },

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope, canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createPayoutSchema } from '@/lib/validations/payout'
 import { generatePayoutNumber } from '@/lib/utils/numbering'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
@@ -39,9 +40,11 @@ export async function GET(request: NextRequest) {
       if (date_to) where.created_at.lte = new Date(date_to + 'T23:59:59.999Z')
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [payouts, total] = await Promise.all([
       prisma.farmerPayout.findMany({
-        where,
+        where: scopedWhere,
         include: {
           farmer: { select: { id: true, name: true, farmer_number: true } },
           cooperative: { select: { id: true, code: true, name: true } },
@@ -51,7 +54,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.farmerPayout.count({ where }),
+      prisma.farmerPayout.count({ where: scopedWhere }),
     ])
 
     return successResponse(payouts, {
@@ -84,6 +87,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { farmer_id, cooperative_id, amount, payout_method, transfer_reference, proof_file_id } = parsed.data
+
+    if (!(await canAccessCooperative(user, cooperative_id))) {
+      return errorResponse('FORBIDDEN', 'Anda tidak memiliki akses ke koperasi ini.', undefined, 403)
+    }
 
     const farmer = await prisma.farmer.findUnique({
       where: { id: farmer_id },

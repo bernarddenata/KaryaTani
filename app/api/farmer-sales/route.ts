@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope, canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createFarmerSaleSchema } from '@/lib/validations/farmer-sale'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import { generateSaleNumber, generateBatchNumber } from '@/lib/utils/numbering'
@@ -10,6 +11,7 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
   validationErrorResponse,
+  errorResponse,
   serverErrorResponse,
 } from '@/lib/api/response'
 
@@ -68,10 +70,12 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const [total, sales] = await Promise.all([
-      prisma.farmerSale.count({ where }),
+      prisma.farmerSale.count({ where: scopedWhere }),
       prisma.farmerSale.findMany({
-        where,
+        where: scopedWhere,
         include: {
           farmer: { select: { id: true, name: true, farmer_number: true, photo_url: true } },
           representative: { select: { id: true, name: true } },
@@ -112,6 +116,30 @@ export async function POST(request: NextRequest) {
           message: e.message,
         }))
       )
+    }
+
+    if (!(await canAccessCooperative(user, parsed.data.cooperative_id))) {
+      return errorResponse(
+        'FORBIDDEN',
+        'Anda tidak memiliki akses ke koperasi ini.',
+        undefined,
+        403
+      )
+    }
+
+    const farmerRecord = await prisma.farmer.findUnique({
+      where: { id: parsed.data.farmer_id },
+      select: { id: true, cooperative_id: true },
+    })
+    if (!farmerRecord) {
+      return validationErrorResponse([
+        { field: 'farmer_id', message: 'Petani tidak ditemukan.' },
+      ])
+    }
+    if (farmerRecord.cooperative_id !== parsed.data.cooperative_id) {
+      return validationErrorResponse([
+        { field: 'farmer_id', message: 'Petani tidak terdaftar pada koperasi yang dipilih.' },
+      ])
     }
 
     const saleNumber = await generateSaleNumber()

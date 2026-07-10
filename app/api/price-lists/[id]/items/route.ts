@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { createPriceListItemSchema } from '@/lib/validations/price-list'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -26,6 +27,8 @@ export async function GET(
 
     const priceList = await prisma.priceList.findUnique({ where: { id } })
     if (!priceList) return notFoundResponse('Daftar harga tidak ditemukan.')
+    if (!(await canAccessCooperative(user, priceList.cooperative_id)))
+      return notFoundResponse('Daftar harga tidak ditemukan.')
 
     const items = await prisma.priceListItem.findMany({
       where: { price_list_id: id },

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { updateRepresentativeSchema } from '@/lib/validations/representative'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -33,12 +34,15 @@ export async function GET(
             id: true,
             farmer_number: true,
             name: true,
+            cooperative_id: true,
           },
         },
       },
     })
 
     if (!representative)
+      return notFoundResponse('Pengantar tidak ditemukan.')
+    if (!(await canAccessCooperative(user, representative.farmer.cooperative_id)))
       return notFoundResponse('Pengantar tidak ditemukan.')
 
     return successResponse(representative)

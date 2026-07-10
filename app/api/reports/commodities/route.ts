@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
 import { hasPermission } from '@/lib/rbac/permissions'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import {
   successResponse,
   unauthorizedResponse,
@@ -26,9 +27,11 @@ export async function GET(request: NextRequest) {
       if (date_to) where.created_at.lte = new Date(date_to + 'T23:59:59.999Z')
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const commodityVolumes = await prisma.farmerSale.groupBy({
       by: ['commodity_id'],
-      where,
+      where: scopedWhere,
       _sum: { received_weight: true, total_amount: true },
       _count: true,
     })

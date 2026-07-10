@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { getCurrentUser } from '@/lib/auth/session'
+import { applyCooperativeScope } from '@/lib/rbac/cooperative-scope'
 import { submissionStatus, toDecimal } from '@/lib/utils/mobile-labels'
 import {
   successResponse,
@@ -36,8 +37,10 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    const scopedWhere = await applyCooperativeScope(where, user)
+
     const sales = await prisma.farmerSale.findMany({
-      where,
+      where: scopedWhere,
       include: {
         farmer: { select: { id: true, name: true, farmer_number: true } },
         commodity: { select: { id: true, name: true, default_unit: true } },
