@@ -34,8 +34,7 @@ export async function GET() {
       { name: 'Reports', description: 'Laporan dan ringkasan data' },
       { name: 'Files', description: 'Upload dan manajemen file' },
       { name: 'Audit Logs', description: 'Log aktivitas sistem' },
-      { name: 'Farmer App Auth', description: 'Autentikasi aplikasi petani (Karya Taniku)' },
-      { name: 'Farmer App', description: 'Endpoint aplikasi petani (Karya Taniku)' },
+      { name: 'Mobile Farmer / Karya Taniku', description: 'API aplikasi mobile petani (Karya Taniku). Semua endpoint hanya dapat diakses oleh petani yang login dan hanya mengembalikan data milik petani sendiri.' },
     ],
 
     paths: {
@@ -4590,75 +4589,17 @@ export async function GET() {
         },
       },
 
-      // ==================== Farmer App Auth ====================
-      '/farmer-app/auth/register': {
+      // ==================== Mobile Farmer / Karya Taniku ====================
+      '/mobile/farmer/auth/login': {
         post: {
-          tags: ['Farmer App Auth'],
-          summary: 'Aktivasi akun petani',
-          description:
-            'Mengaktifkan akun petani di aplikasi Karya Taniku. Petani harus sudah terdaftar di sistem oleh admin koperasi. Membutuhkan nomor telepon yang sesuai dan PIN 6 digit.',
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Login petani',
+          description: 'Autentikasi petani menggunakan nomor HP atau nomor anggota dan PIN 6 digit. Mengembalikan bearer token JWT.',
           requestBody: {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/FarmerAppRegisterInput' },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Aktivasi berhasil',
-              content: {
-                'application/json': {
-                  schema: {
-                    allOf: [
-                      { $ref: '#/components/schemas/SuccessResponse' },
-                      {
-                        type: 'object',
-                        properties: {
-                          data: {
-                            type: 'object',
-                            properties: {
-                              token: { type: 'string' },
-                              farmer: { $ref: '#/components/schemas/FarmerAppProfile' },
-                            },
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-            '404': {
-              description: 'Petani tidak ditemukan dengan nomor telepon tersebut',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/ErrorResponse' },
-                },
-              },
-            },
-            '422': {
-              description: 'Data tidak valid atau akun sudah diaktifkan',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/ErrorResponse' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/farmer-app/auth/login': {
-        post: {
-          tags: ['Farmer App Auth'],
-          summary: 'Masuk aplikasi petani',
-          description: 'Autentikasi petani dengan nomor telepon dan PIN. Mengembalikan token JWT.',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/FarmerAppLoginInput' },
+                schema: { $ref: '#/components/schemas/MobileFarmerLoginRequest' },
               },
             },
           },
@@ -4673,11 +4614,156 @@ export async function GET() {
                       {
                         type: 'object',
                         properties: {
+                          data: { $ref: '#/components/schemas/MobileFarmerAuthResponse' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Identifier atau PIN salah',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'UNAUTHORIZED', message: 'Identifier atau PIN salah.' },
+                  },
+                },
+              },
+            },
+            '403': {
+              description: 'Akun petani tidak aktif',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'FORBIDDEN', message: 'Akun petani tidak aktif.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'Data yang dikirim tidak valid.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/auth/register': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Aktivasi akun petani',
+          description: 'Mengaktifkan akun petani di aplikasi Karya Taniku. Identifier berupa nomor HP atau nomor anggota (farmer_number) dan PIN 6 digit. Petani harus sudah terdaftar oleh admin koperasi terlebih dahulu.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MobileFarmerLoginRequest' },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Aktivasi berhasil',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobileFarmerAuthResponse' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '403': {
+              description: 'Akun petani tidak aktif',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'FORBIDDEN', message: 'Akun petani tidak aktif.' },
+                  },
+                },
+              },
+            },
+            '404': {
+              description: 'Identifier tidak dikenal',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Petani dengan identifier tersebut tidak ditemukan.' },
+                  },
+                },
+              },
+            },
+            '409': {
+              description: 'Akun sudah pernah diaktifkan',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'Akun sudah diaktifkan sebelumnya.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'Data yang dikirim tidak valid.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/auth/logout': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Logout petani',
+          description: 'Mengakhiri sesi petani. Endpoint publik yang menerima token jika diberikan namun tidak wajib.',
+          responses: {
+            '200': {
+              description: 'Logout berhasil',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
                           data: {
                             type: 'object',
                             properties: {
-                              token: { type: 'string' },
-                              farmer: { $ref: '#/components/schemas/FarmerAppProfile' },
+                              message: { type: 'string', example: 'Berhasil keluar dari aplikasi.' },
                             },
                           },
                         },
@@ -4687,36 +4773,69 @@ export async function GET() {
                 },
               },
             },
-            '401': {
-              description: 'Nomor telepon atau PIN salah',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/ErrorResponse' },
-                },
-              },
-            },
-            '422': {
-              description: 'Data tidak valid',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/ErrorResponse' },
-                },
-              },
-            },
           },
         },
       },
-      '/farmer-app/auth/change-pin': {
+      '/mobile/farmer/auth/me': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Info petani yang sedang login',
+          description: 'Mengembalikan info dasar petani yang sedang login termasuk identitas dan koperasi.',
+          security: [{ mobileFarmerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Info petani',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              farmer_id: { type: 'string', format: 'uuid' },
+                              name: { type: 'string' },
+                              phone: { type: 'string' },
+                              member_number: { type: 'string' },
+                              village: { type: 'string', nullable: true },
+                              farm_location: { type: 'string', nullable: true },
+                              main_commodity: { type: 'string', nullable: true },
+                              cooperative_name: { type: 'string', nullable: true },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/mobile/farmer/auth/change-pin': {
         post: {
-          tags: ['Farmer App Auth'],
+          tags: ['Mobile Farmer / Karya Taniku'],
           summary: 'Ganti PIN',
-          description: 'Mengganti PIN petani. Membutuhkan PIN lama yang benar.',
-          security: [{ farmerBearerAuth: [] }],
+          description: 'Mengganti PIN petani. Membutuhkan PIN lama yang benar. PIN baru harus 6 digit.',
+          security: [{ mobileFarmerAuth: [] }],
           requestBody: {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/FarmerAppChangePinInput' },
+                schema: {
+                  type: 'object',
+                  required: ['current_pin', 'new_pin'],
+                  properties: {
+                    current_pin: { type: 'string', example: '123456' },
+                    new_pin: { type: 'string', example: '654321' },
+                  },
+                },
               },
             },
           },
@@ -4745,10 +4864,14 @@ export async function GET() {
               },
             },
             '401': {
-              description: 'Belum login atau PIN lama salah',
+              description: 'PIN lama salah atau token tidak valid',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'UNAUTHORIZED', message: 'PIN lama tidak sesuai.' },
+                  },
                 },
               },
             },
@@ -4763,14 +4886,12 @@ export async function GET() {
           },
         },
       },
-
-      // ==================== Farmer App ====================
-      '/farmer-app/profile': {
+      '/mobile/farmer/profile': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Profil petani',
-          description: 'Mengembalikan profil petani yang sedang login beserta ringkasan dompet dan statistik.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Profil lengkap petani',
+          description: 'Mengembalikan profil lengkap petani yang sedang login beserta info verifikasi dan koperasi.',
+          security: [{ mobileFarmerAuth: [] }],
           responses: {
             '200': {
               description: 'Profil petani',
@@ -4782,33 +4903,7 @@ export async function GET() {
                       {
                         type: 'object',
                         properties: {
-                          data: {
-                            allOf: [
-                              { $ref: '#/components/schemas/FarmerAppProfile' },
-                              {
-                                type: 'object',
-                                properties: {
-                                  wallet: {
-                                    type: 'object',
-                                    nullable: true,
-                                    properties: {
-                                      id: { type: 'string', format: 'uuid' },
-                                      available_balance: { type: 'number' },
-                                      held_balance: { type: 'number' },
-                                      total_paid: { type: 'number' },
-                                    },
-                                  },
-                                  stats: {
-                                    type: 'object',
-                                    properties: {
-                                      total_sales: { type: 'integer' },
-                                      total_disputes: { type: 'integer' },
-                                    },
-                                  },
-                                },
-                              },
-                            ],
-                          },
+                          data: { $ref: '#/components/schemas/MobileFarmerProfile' },
                         },
                       },
                     ],
@@ -4817,84 +4912,49 @@ export async function GET() {
               },
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-        patch: {
-          tags: ['Farmer App'],
-          summary: 'Ubah profil petani',
-          description: 'Memperbarui profil petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    address: { type: 'string' },
-                    village: { type: 'string' },
-                    photo_url: { type: 'string', nullable: true },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Profil berhasil diperbarui',
-              content: {
-                'application/json': {
-                  schema: {
-                    allOf: [
-                      { $ref: '#/components/schemas/SuccessResponse' },
-                      {
-                        type: 'object',
-                        properties: {
-                          data: { $ref: '#/components/schemas/FarmerAppProfile' },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '422': {
-              description: 'Data tidak valid',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/ErrorResponse' },
-                },
-              },
-            },
           },
         },
       },
-      '/farmer-app/sales': {
+      '/mobile/farmer/submissions': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Daftar penjualan petani',
-          description: 'Mengembalikan daftar penjualan milik petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Daftar pengiriman hasil tani',
+          description: 'Mengembalikan daftar pengiriman (submissions) milik petani yang sedang login. Mendukung filter status, komoditas, dan rentang tanggal.',
+          security: [{ mobileFarmerAuth: [] }],
           parameters: [
-            { $ref: '#/components/parameters/PageParam' },
-            {
-              name: 'limit',
-              in: 'query',
-              schema: { type: 'integer', default: 10, maximum: 50 },
-              description: 'Jumlah data per halaman (maks 50)',
-            },
             {
               name: 'status',
               in: 'query',
-              schema: { type: 'string' },
-              description: 'Filter status penjualan',
+              schema: {
+                type: 'string',
+                enum: ['WAITING_QC', 'QC_IN_PROGRESS', 'QC_COMPLETED', 'PAYMENT_PENDING', 'PAID', 'DISPUTED', 'CANCELLED'],
+              },
+              description: 'Filter status pengiriman',
             },
+            {
+              name: 'commodity_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter berdasarkan ID komoditas',
+            },
+            {
+              name: 'start_date',
+              in: 'query',
+              schema: { type: 'string', format: 'date' },
+              description: 'Filter tanggal pengiriman mulai',
+            },
+            {
+              name: 'end_date',
+              in: 'query',
+              schema: { type: 'string', format: 'date' },
+              description: 'Filter tanggal pengiriman akhir',
+            },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
           ],
           responses: {
             '200': {
-              description: 'Daftar penjualan',
+              description: 'Daftar pengiriman',
               content: {
                 'application/json': {
                   schema: {
@@ -4905,7 +4965,7 @@ export async function GET() {
                         properties: {
                           data: {
                             type: 'array',
-                            items: { $ref: '#/components/schemas/FarmerSale' },
+                            items: { $ref: '#/components/schemas/MobileSubmissionListItem' },
                           },
                           meta: { $ref: '#/components/schemas/PaginationMeta' },
                         },
@@ -4919,24 +4979,24 @@ export async function GET() {
           },
         },
       },
-      '/farmer-app/sales/{id}': {
+      '/mobile/farmer/submissions/{submissionId}': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Detail penjualan petani',
-          description: 'Mengembalikan detail penjualan beserta foto dan hasil QC terbaru.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Detail pengiriman',
+          description: 'Mengembalikan detail lengkap satu pengiriman milik petani, termasuk timeline, foto intake, ringkasan QC dan pembayaran.',
+          security: [{ mobileFarmerAuth: [] }],
           parameters: [
             {
-              name: 'id',
+              name: 'submissionId',
               in: 'path',
               required: true,
               schema: { type: 'string', format: 'uuid' },
-              description: 'ID penjualan',
+              description: 'ID pengiriman',
             },
           ],
           responses: {
             '200': {
-              description: 'Detail penjualan',
+              description: 'Detail pengiriman',
               content: {
                 'application/json': {
                   schema: {
@@ -4945,7 +5005,7 @@ export async function GET() {
                       {
                         type: 'object',
                         properties: {
-                          data: { $ref: '#/components/schemas/FarmerSale' },
+                          data: { $ref: '#/components/schemas/MobileSubmissionDetail' },
                         },
                       },
                     ],
@@ -4954,19 +5014,147 @@ export async function GET() {
               },
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
+            '404': {
+              description: 'Pengiriman tidak ditemukan atau bukan milik petani',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Data pengiriman tidak ditemukan.' },
+                  },
+                },
+              },
+            },
           },
         },
       },
-      '/farmer-app/wallet': {
+      '/mobile/farmer/submissions/{submissionId}/qc-result': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Saldo dompet',
-          description: 'Mengembalikan ringkasan saldo dompet petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Hasil QC pengiriman',
+          description: 'Mengembalikan hasil quality control untuk pengiriman tertentu, meliputi breakdown grade, parameter QC, foto bukti, dan ringkasan pembayaran.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'submissionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID pengiriman',
+            },
+          ],
           responses: {
             '200': {
-              description: 'Ringkasan dompet',
+              description: 'Hasil QC',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobileQcResultDetail' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '404': {
+              description: 'Hasil QC belum tersedia atau pengiriman tidak ditemukan',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'QC_RESULT_NOT_AVAILABLE', message: 'Hasil QC belum tersedia untuk pengiriman ini.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/submissions/{submissionId}/payment-estimation': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Estimasi pembayaran',
+          description: 'Mengembalikan estimasi pembayaran untuk pengiriman tertentu, meliputi subtotal, potongan, dan total estimasi.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'submissionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID pengiriman',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Estimasi pembayaran',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobilePaymentEstimation' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '404': {
+              description: 'Estimasi belum tersedia atau pengiriman tidak ditemukan',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'PAYMENT_ESTIMATION_NOT_AVAILABLE', message: 'Estimasi pembayaran belum tersedia untuk pengiriman ini.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/submissions/{submissionId}/disputes': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Ajukan keberatan untuk pengiriman',
+          description: 'Mengajukan keberatan (dispute) terhadap hasil pengiriman. Tidak dapat mengajukan keberatan jika sudah ada dispute aktif untuk pengiriman yang sama atau jika pengiriman tidak memenuhi syarat.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'submissionId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID pengiriman',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MobileCreateDisputeRequest' },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Keberatan berhasil diajukan',
               content: {
                 'application/json': {
                   schema: {
@@ -4978,19 +5166,12 @@ export async function GET() {
                           data: {
                             type: 'object',
                             properties: {
-                              id: { type: 'string', format: 'uuid', nullable: true },
-                              available_balance: { type: 'number' },
-                              held_balance: { type: 'number' },
-                              total_paid: { type: 'number' },
-                              cooperative: {
-                                type: 'object',
-                                properties: {
-                                  id: { type: 'string', format: 'uuid' },
-                                  name: { type: 'string' },
-                                },
-                              },
-                              created_at: { type: 'string', format: 'date-time', nullable: true },
-                              updated_at: { type: 'string', format: 'date-time', nullable: true },
+                              dispute_id: { type: 'string', format: 'uuid' },
+                              dispute_number: { type: 'string' },
+                              submission_id: { type: 'string', format: 'uuid' },
+                              status: { type: 'string', example: 'SUBMITTED' },
+                              status_label: { type: 'string', example: 'Diajukan' },
+                              created_at: { type: 'string', format: 'date-time' },
                             },
                           },
                         },
@@ -5001,135 +5182,63 @@ export async function GET() {
               },
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/farmer-app/wallet/mutations': {
-        get: {
-          tags: ['Farmer App'],
-          summary: 'Riwayat mutasi dompet',
-          description: 'Mengembalikan riwayat mutasi dompet petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
-          parameters: [
-            { $ref: '#/components/parameters/PageParam' },
-            { $ref: '#/components/parameters/LimitParam' },
-            {
-              name: 'mutation_type',
-              in: 'query',
-              schema: { type: 'string' },
-              description: 'Filter jenis mutasi',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Riwayat mutasi',
+            '404': {
+              description: 'Pengiriman tidak ditemukan',
               content: {
                 'application/json': {
-                  schema: {
-                    allOf: [
-                      { $ref: '#/components/schemas/SuccessResponse' },
-                      {
-                        type: 'object',
-                        properties: {
-                          data: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                id: { type: 'string', format: 'uuid' },
-                                mutation_type: { type: 'string' },
-                                reference_type: { type: 'string', nullable: true },
-                                reference_id: { type: 'string', nullable: true },
-                                amount_in: { type: 'number' },
-                                amount_out: { type: 'number' },
-                                balance_before: { type: 'number' },
-                                balance_after: { type: 'number' },
-                                notes: { type: 'string', nullable: true },
-                                created_at: { type: 'string', format: 'date-time' },
-                              },
-                            },
-                          },
-                          meta: { $ref: '#/components/schemas/PaginationMeta' },
-                        },
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            '409': {
+              description: 'Pengiriman tidak memenuhi syarat atau sudah ada dispute aktif',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  examples: {
+                    not_eligible: {
+                      value: {
+                        success: false,
+                        error: { code: 'SUBMISSION_NOT_ELIGIBLE_FOR_DISPUTE', message: 'Pengiriman tidak memenuhi syarat untuk pengajuan keberatan.' },
                       },
-                    ],
+                    },
+                    active_exists: {
+                      value: {
+                        success: false,
+                        error: { code: 'ACTIVE_DISPUTE_ALREADY_EXISTS', message: 'Sudah ada keberatan aktif untuk pengiriman ini.' },
+                      },
+                    },
                   },
                 },
               },
             },
-            '401': { $ref: '#/components/responses/Unauthorized' },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
           },
         },
       },
-      '/farmer-app/payouts': {
+      '/mobile/farmer/disputes': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Riwayat pembayaran',
-          description: 'Mengembalikan riwayat pembayaran untuk petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Daftar keberatan',
+          description: 'Mengembalikan daftar keberatan (disputes) yang diajukan oleh petani yang sedang login.',
+          security: [{ mobileFarmerAuth: [] }],
           parameters: [
-            { $ref: '#/components/parameters/PageParam' },
-            { $ref: '#/components/parameters/LimitParam' },
             {
               name: 'status',
               in: 'query',
-              schema: { type: 'string' },
-              description: 'Filter status pembayaran',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Riwayat pembayaran',
-              content: {
-                'application/json': {
-                  schema: {
-                    allOf: [
-                      { $ref: '#/components/schemas/SuccessResponse' },
-                      {
-                        type: 'object',
-                        properties: {
-                          data: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                id: { type: 'string', format: 'uuid' },
-                                payout_number: { type: 'string' },
-                                amount: { type: 'number' },
-                                payout_method: { type: 'string' },
-                                transfer_reference: { type: 'string', nullable: true },
-                                status: { type: 'string' },
-                                paid_at: { type: 'string', format: 'date-time', nullable: true },
-                                created_at: { type: 'string', format: 'date-time' },
-                                cooperative: {
-                                  type: 'object',
-                                  properties: {
-                                    id: { type: 'string', format: 'uuid' },
-                                    name: { type: 'string' },
-                                  },
-                                },
-                              },
-                            },
-                          },
-                          meta: { $ref: '#/components/schemas/PaginationMeta' },
-                        },
-                      },
-                    ],
-                  },
-                },
+              schema: {
+                type: 'string',
+                enum: ['SUBMITTED', 'UNDER_REVIEW', 'RE_QC_REQUIRED', 'APPROVED', 'REJECTED', 'CLOSED'],
               },
+              description: 'Filter status keberatan',
             },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/farmer-app/disputes': {
-        get: {
-          tags: ['Farmer App'],
-          summary: 'Daftar keberatan petani',
-          description: 'Mengembalikan daftar keberatan yang diajukan oleh petani yang sedang login.',
-          security: [{ farmerBearerAuth: [] }],
-          parameters: [
             { $ref: '#/components/parameters/PageParam' },
             { $ref: '#/components/parameters/LimitParam' },
           ],
@@ -5146,7 +5255,7 @@ export async function GET() {
                         properties: {
                           data: {
                             type: 'array',
-                            items: { $ref: '#/components/schemas/Dispute' },
+                            items: { $ref: '#/components/schemas/MobileDisputeListItem' },
                           },
                           meta: { $ref: '#/components/schemas/PaginationMeta' },
                         },
@@ -5159,41 +5268,25 @@ export async function GET() {
             '401': { $ref: '#/components/responses/Unauthorized' },
           },
         },
-        post: {
-          tags: ['Farmer App'],
-          summary: 'Ajukan keberatan',
-          description:
-            'Mengajukan keberatan untuk penjualan tertentu. Tidak dapat mengajukan keberatan duplikat untuk penjualan yang sama.',
-          security: [{ farmerBearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['farmer_sale_id', 'reason_category', 'farmer_note'],
-                  properties: {
-                    farmer_sale_id: { type: 'string', format: 'uuid' },
-                    reason_category: {
-                      type: 'string',
-                      enum: [
-                        'BERAT_TIDAK_SESUAI',
-                        'GRADE_TIDAK_SESUAI',
-                        'BERAT_REJECT_TIDAK_SESUAI',
-                        'HARGA_TIDAK_SESUAI',
-                        'PEMBAYARAN_TIDAK_SESUAI',
-                        'LAINNYA',
-                      ],
-                    },
-                    farmer_note: { type: 'string' },
-                  },
-                },
-              },
+      },
+      '/mobile/farmer/disputes/{disputeId}': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Detail keberatan',
+          description: 'Mengembalikan detail lengkap satu keberatan milik petani, termasuk timeline penanganan.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'disputeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID keberatan',
             },
-          },
+          ],
           responses: {
-            '201': {
-              description: 'Keberatan berhasil diajukan',
+            '200': {
+              description: 'Detail keberatan',
               content: {
                 'application/json': {
                   schema: {
@@ -5202,7 +5295,7 @@ export async function GET() {
                       {
                         type: 'object',
                         properties: {
-                          data: { $ref: '#/components/schemas/Dispute' },
+                          data: { $ref: '#/components/schemas/MobileDisputeDetail' },
                         },
                       },
                     ],
@@ -5211,32 +5304,85 @@ export async function GET() {
               },
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
-            '422': {
-              description: 'Data tidak valid atau keberatan duplikat',
+            '404': {
+              description: 'Keberatan tidak ditemukan atau bukan milik petani',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Data keberatan tidak ditemukan.' },
+                  },
                 },
               },
             },
           },
         },
       },
-      '/farmer-app/notifications': {
+      '/mobile/farmer/quality-history': {
         get: {
-          tags: ['Farmer App'],
-          summary: 'Daftar notifikasi',
-          description: 'Mengembalikan daftar notifikasi untuk petani yang sedang login. Meta menyertakan jumlah belum dibaca.',
-          security: [{ farmerBearerAuth: [] }],
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Riwayat kualitas hasil tani',
+          description: 'Mengembalikan riwayat kualitas hasil tani petani yang sedang login, meliputi ringkasan, tren, insight, dan item detail. Mendukung filter komoditas dan rentang tanggal.',
+          security: [{ mobileFarmerAuth: [] }],
           parameters: [
+            {
+              name: 'commodity_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter berdasarkan ID komoditas',
+            },
+            {
+              name: 'start_date',
+              in: 'query',
+              schema: { type: 'string', format: 'date' },
+              description: 'Filter tanggal mulai',
+            },
+            {
+              name: 'end_date',
+              in: 'query',
+              schema: { type: 'string', format: 'date' },
+              description: 'Filter tanggal akhir',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Riwayat kualitas',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobileQualityHistory' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/mobile/farmer/notifications': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Daftar notifikasi',
+          description: 'Mengembalikan daftar notifikasi untuk petani yang sedang login. Meta menyertakan jumlah notifikasi yang belum dibaca.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'is_read',
+              in: 'query',
+              schema: { type: 'boolean' },
+              description: 'Filter status baca (true=sudah dibaca, false=belum dibaca)',
+            },
             { $ref: '#/components/parameters/PageParam' },
             { $ref: '#/components/parameters/LimitParam' },
-            {
-              name: 'unread',
-              in: 'query',
-              schema: { type: 'string', enum: ['true'] },
-              description: 'Hanya tampilkan notifikasi belum dibaca',
-            },
           ],
           responses: {
             '200': {
@@ -5251,19 +5397,7 @@ export async function GET() {
                         properties: {
                           data: {
                             type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                id: { type: 'string', format: 'uuid' },
-                                title: { type: 'string' },
-                                body: { type: 'string' },
-                                type: { type: 'string' },
-                                reference_type: { type: 'string', nullable: true },
-                                reference_id: { type: 'string', nullable: true },
-                                is_read: { type: 'boolean' },
-                                created_at: { type: 'string', format: 'date-time' },
-                              },
-                            },
+                            items: { $ref: '#/components/schemas/MobileNotification' },
                           },
                           meta: {
                             allOf: [
@@ -5271,7 +5405,7 @@ export async function GET() {
                               {
                                 type: 'object',
                                 properties: {
-                                  unread_count: { type: 'integer' },
+                                  unread_count: { type: 'integer', example: 3 },
                                 },
                               },
                             ],
@@ -5286,28 +5420,22 @@ export async function GET() {
             '401': { $ref: '#/components/responses/Unauthorized' },
           },
         },
+      },
+      '/mobile/farmer/notifications/{notificationId}/read': {
         patch: {
-          tags: ['Farmer App'],
+          tags: ['Mobile Farmer / Karya Taniku'],
           summary: 'Tandai notifikasi dibaca',
-          description:
-            'Menandai notifikasi sebagai sudah dibaca. Jika notification_ids diberikan, hanya menandai ID tersebut. Jika tidak, menandai semua notifikasi.',
-          security: [{ farmerBearerAuth: [] }],
-          requestBody: {
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    notification_ids: {
-                      type: 'array',
-                      items: { type: 'string', format: 'uuid' },
-                      description: 'ID notifikasi yang akan ditandai. Kosongkan untuk menandai semua.',
-                    },
-                  },
-                },
-              },
+          description: 'Menandai satu notifikasi sebagai sudah dibaca.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'notificationId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID notifikasi',
             },
-          },
+          ],
           responses: {
             '200': {
               description: 'Notifikasi berhasil ditandai',
@@ -5322,10 +5450,122 @@ export async function GET() {
                           data: {
                             type: 'object',
                             properties: {
-                              message: { type: 'string', example: 'Notifikasi berhasil ditandai sebagai dibaca.' },
-                              count: { type: 'integer', description: 'Jumlah notifikasi yang ditandai' },
+                              id: { type: 'string', format: 'uuid' },
+                              is_read: { type: 'boolean', example: true },
                             },
                           },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '404': {
+              description: 'Notifikasi tidak ditemukan atau bukan milik petani',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Data notifikasi tidak ditemukan.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/files/upload': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Upload file (bukti keberatan, dsb)',
+          description: 'Upload file (foto/dokumen) untuk keperluan aplikasi mobile petani. Default purpose adalah DISPUTE_EVIDENCE (bukti keberatan).',
+          security: [{ mobileFarmerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['file'],
+                  properties: {
+                    file: { type: 'string', format: 'binary', description: 'File yang akan diupload' },
+                    purpose: {
+                      type: 'string',
+                      default: 'DISPUTE_EVIDENCE',
+                      example: 'DISPUTE_EVIDENCE',
+                      description: 'Tujuan/kategori file',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'File berhasil diupload',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobileFileUploadResponse' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '422': {
+              description: 'File tidak valid (ukuran terlalu besar atau tipe tidak diizinkan)',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  examples: {
+                    too_large: {
+                      value: {
+                        success: false,
+                        error: { code: 'FILE_TOO_LARGE', message: 'Ukuran file melebihi batas yang diizinkan.' },
+                      },
+                    },
+                    invalid_type: {
+                      value: {
+                        success: false,
+                        error: { code: 'INVALID_FILE_TYPE', message: 'Tipe file tidak diizinkan.' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/home-summary': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Ringkasan beranda',
+          description: 'Mengembalikan data ringkasan untuk halaman beranda aplikasi Karya Taniku: sapaan, kartu ringkasan status, pengiriman terbaru, dan aktivitas terkini petani.',
+          security: [{ mobileFarmerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Ringkasan beranda',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/MobileHomeSummary' },
                         },
                       },
                     ],
@@ -5347,11 +5587,11 @@ export async function GET() {
           bearerFormat: 'JWT',
           description: 'Token JWT yang didapat dari endpoint login admin.',
         },
-        farmerBearerAuth: {
+        mobileFarmerAuth: {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Token JWT yang didapat dari endpoint login aplikasi petani (Karya Taniku).',
+          description: 'Bearer token yang didapat dari POST /mobile/farmer/auth/login. Token khusus untuk aplikasi Karya Taniku dan hanya dapat mengakses endpoint /mobile/farmer/*.',
         },
       },
       parameters: {
@@ -6214,75 +6454,465 @@ export async function GET() {
             },
           },
         },
-        FarmerAppRegisterInput: {
+        MobileFarmerLoginRequest: {
           type: 'object',
-          required: ['phone', 'pin'],
+          required: ['identifier', 'pin'],
           properties: {
-            phone: {
+            identifier: {
               type: 'string',
-              minLength: 10,
-              maxLength: 15,
               example: '081234567890',
-              description: 'Nomor telepon yang terdaftar di sistem koperasi',
+              description: 'Nomor HP atau nomor anggota petani.',
             },
             pin: {
               type: 'string',
-              pattern: '^[0-9]{6}$',
               example: '123456',
-              description: 'PIN 6 digit untuk login',
+              description: 'PIN 6 digit.',
             },
           },
         },
-        FarmerAppLoginInput: {
+        MobileFarmerAuthResponse: {
           type: 'object',
-          required: ['phone', 'pin'],
           properties: {
-            phone: { type: 'string', example: '081234567890' },
-            pin: { type: 'string', pattern: '^[0-9]{6}$', example: '123456' },
-          },
-        },
-        FarmerAppChangePinInput: {
-          type: 'object',
-          required: ['current_pin', 'new_pin'],
-          properties: {
-            current_pin: {
-              type: 'string',
-              pattern: '^[0-9]{6}$',
-              example: '123456',
-              description: 'PIN saat ini',
-            },
-            new_pin: {
-              type: 'string',
-              pattern: '^[0-9]{6}$',
-              example: '654321',
-              description: 'PIN baru (6 digit)',
+            access_token: { type: 'string' },
+            refresh_token: { type: 'string', nullable: true },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                farmer_id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+                phone: { type: 'string' },
+                member_number: { type: 'string' },
+                role: { type: 'string', example: 'FARMER' },
+              },
             },
           },
         },
-        FarmerAppProfile: {
+        MobileFarmerProfile: {
           type: 'object',
           properties: {
-            id: { type: 'string', format: 'uuid' },
-            farmer_number: { type: 'string', example: 'PTN-001' },
-            name: { type: 'string', example: 'Budi Santoso' },
+            farmer_id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
             phone: { type: 'string' },
+            member_number: { type: 'string' },
             nik: { type: 'string', nullable: true },
             address: { type: 'string', nullable: true },
             village: { type: 'string', nullable: true },
-            seller_type: { type: 'string' },
+            farm_location: { type: 'string', nullable: true },
+            main_commodity: { type: 'string', nullable: true },
+            seller_type: { type: 'string', nullable: true },
             photo_url: { type: 'string', nullable: true },
             verification_status: { type: 'string' },
+            cooperative_name: { type: 'string', nullable: true },
+            cooperative_code: { type: 'string', nullable: true },
             status: { type: 'string' },
-            app_activated_at: { type: 'string', format: 'date-time', nullable: true },
-            cooperative: {
+          },
+        },
+        MobileSubmissionListItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            submission_number: { type: 'string', example: 'SUB-2026-0001' },
+            batch_number: { type: 'string', nullable: true, example: 'BATCH-2026-0001' },
+            commodity: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Padi' },
+              },
+            },
+            initial_weight: { type: 'number', example: 1000.5 },
+            received_weight: { type: 'number', nullable: true, example: 990 },
+            status: {
+              type: 'string',
+              enum: ['WAITING_QC', 'QC_IN_PROGRESS', 'QC_COMPLETED', 'PAYMENT_PENDING', 'PAID', 'DISPUTED', 'CANCELLED'],
+            },
+            status_label: { type: 'string', example: 'Menunggu QC' },
+            received_at: { type: 'string', format: 'date-time', nullable: true },
+            estimated_payment: { type: 'number', nullable: true, example: 4500000 },
+            has_qc_result: { type: 'boolean' },
+            has_active_dispute: { type: 'boolean' },
+          },
+        },
+        MobileSubmissionDetail: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            submission_number: { type: 'string' },
+            batch_number: { type: 'string', nullable: true },
+            commodity: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+                variant: { type: 'string', nullable: true },
+              },
+            },
+            initial_weight: { type: 'number' },
+            received_weight: { type: 'number', nullable: true },
+            status: { type: 'string' },
+            status_label: { type: 'string' },
+            received_at: { type: 'string', format: 'date-time', nullable: true },
+            timeline: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  event: { type: 'string', example: 'RECEIVED' },
+                  label: { type: 'string', example: 'Diterima di koperasi' },
+                  timestamp: { type: 'string', format: 'date-time', nullable: true },
+                  actor: { type: 'string', nullable: true },
+                },
+              },
+            },
+            intake_photos: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  url: { type: 'string' },
+                  caption: { type: 'string', nullable: true },
+                },
+              },
+            },
+            qc_result_summary: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                qc_result_id: { type: 'string', format: 'uuid' },
+                completed_at: { type: 'string', format: 'date-time', nullable: true },
+                total_accepted_weight: { type: 'number' },
+                total_rejected_weight: { type: 'number' },
+                dominant_grade: { type: 'string', nullable: true },
+              },
+            },
+            payment_summary: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                subtotal_amount: { type: 'number' },
+                deduction_amount: { type: 'number' },
+                total_estimated_amount: { type: 'number' },
+                payment_status: { type: 'string' },
+                payment_status_label: { type: 'string' },
+              },
+            },
+            active_dispute: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                dispute_id: { type: 'string', format: 'uuid' },
+                dispute_number: { type: 'string' },
+                status: { type: 'string' },
+                status_label: { type: 'string' },
+                created_at: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+        },
+        MobileQcResultDetail: {
+          type: 'object',
+          properties: {
+            qc_result_id: { type: 'string', format: 'uuid' },
+            submission_id: { type: 'string', format: 'uuid' },
+            completed_at: { type: 'string', format: 'date-time', nullable: true },
+            grade_breakdown: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  grade: { type: 'string', example: 'A' },
+                  weight: { type: 'number', example: 500 },
+                  price_per_kg: { type: 'number', example: 5000 },
+                  subtotal: { type: 'number', example: 2500000 },
+                  percentage: { type: 'number', example: 50.5 },
+                },
+              },
+            },
+            qc_parameters: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string', example: 'MOISTURE' },
+                  label: { type: 'string', example: 'Kadar Air' },
+                  value: { type: 'string', example: '14%' },
+                  is_passed: { type: 'boolean' },
+                },
+              },
+            },
+            evidence_photos: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  url: { type: 'string' },
+                  caption: { type: 'string', nullable: true },
+                },
+              },
+            },
+            payment_summary: {
+              type: 'object',
+              properties: {
+                subtotal_amount: { type: 'number' },
+                deduction_amount: { type: 'number' },
+                total_estimated_amount: { type: 'number' },
+              },
+            },
+          },
+        },
+        MobilePaymentEstimation: {
+          type: 'object',
+          properties: {
+            submission_id: { type: 'string', format: 'uuid' },
+            subtotal_amount: { type: 'number', example: 4500000 },
+            deduction_amount: { type: 'number', example: 100000 },
+            total_estimated_amount: { type: 'number', example: 4400000 },
+            payment_status: {
+              type: 'string',
+              enum: ['PAYMENT_PENDING', 'PROCESSING', 'PAID', 'ON_HOLD'],
+            },
+            payment_status_label: { type: 'string', example: 'Menunggu pembayaran' },
+            breakdown: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', example: 'Subtotal Grade A' },
+                  amount: { type: 'number', example: 2500000 },
+                  type: { type: 'string', enum: ['CREDIT', 'DEBIT'], example: 'CREDIT' },
+                },
+              },
+            },
+            timeline: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  event: { type: 'string' },
+                  label: { type: 'string' },
+                  timestamp: { type: 'string', format: 'date-time', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        MobileCreateDisputeRequest: {
+          type: 'object',
+          required: ['reason_category', 'farmer_note'],
+          properties: {
+            reason_category: {
+              type: 'string',
+              enum: [
+                'WEIGHT_MISMATCH',
+                'GRADE_DISAGREEMENT',
+                'REJECTED_WEIGHT_DISAGREEMENT',
+                'PRICE_MISMATCH',
+                'PAYMENT_MISMATCH',
+                'OTHER',
+              ],
+              description: 'Kategori alasan keberatan.',
+            },
+            farmer_note: {
+              type: 'string',
+              description: 'Catatan/penjelasan dari petani.',
+            },
+            evidence_photo_ids: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              description: 'ID foto bukti yang telah diupload sebelumnya (opsional).',
+            },
+          },
+        },
+        MobileDisputeListItem: {
+          type: 'object',
+          properties: {
+            dispute_id: { type: 'string', format: 'uuid' },
+            dispute_number: { type: 'string', example: 'DSP-2026-0001' },
+            submission_id: { type: 'string', format: 'uuid' },
+            submission_number: { type: 'string' },
+            commodity_name: { type: 'string', example: 'Padi' },
+            reason_category: {
+              type: 'string',
+              enum: [
+                'WEIGHT_MISMATCH',
+                'GRADE_DISAGREEMENT',
+                'REJECTED_WEIGHT_DISAGREEMENT',
+                'PRICE_MISMATCH',
+                'PAYMENT_MISMATCH',
+                'OTHER',
+              ],
+            },
+            reason_label: { type: 'string', example: 'Berat tidak sesuai' },
+            status: {
+              type: 'string',
+              enum: ['SUBMITTED', 'UNDER_REVIEW', 'RE_QC_REQUIRED', 'APPROVED', 'REJECTED', 'CLOSED'],
+            },
+            status_label: { type: 'string', example: 'Diajukan' },
+            created_at: { type: 'string', format: 'date-time' },
+            resolved_at: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        MobileDisputeDetail: {
+          type: 'object',
+          properties: {
+            dispute_id: { type: 'string', format: 'uuid' },
+            dispute_number: { type: 'string' },
+            submission_id: { type: 'string', format: 'uuid' },
+            submission_number: { type: 'string' },
+            commodity_name: { type: 'string' },
+            reason_category: { type: 'string' },
+            reason_label: { type: 'string' },
+            farmer_note: { type: 'string' },
+            status: { type: 'string' },
+            status_label: { type: 'string' },
+            resolution_note: { type: 'string', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            resolved_at: { type: 'string', format: 'date-time', nullable: true },
+            evidence_photos: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  url: { type: 'string' },
+                  caption: { type: 'string', nullable: true },
+                },
+              },
+            },
+            timeline: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  event: { type: 'string', example: 'SUBMITTED' },
+                  label: { type: 'string', example: 'Keberatan diajukan' },
+                  timestamp: { type: 'string', format: 'date-time' },
+                  actor: { type: 'string', nullable: true },
+                  note: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        MobileNotification: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            message: { type: 'string' },
+            type: { type: 'string', example: 'SUBMISSION_UPDATE' },
+            related_entity_type: { type: 'string', nullable: true, example: 'SUBMISSION' },
+            related_entity_id: { type: 'string', nullable: true },
+            is_read: { type: 'boolean' },
+            created_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        MobileFileUploadResponse: {
+          type: 'object',
+          properties: {
+            file_id: { type: 'string', format: 'uuid' },
+            url: { type: 'string' },
+            file_name: { type: 'string' },
+            file_type: { type: 'string', example: 'image/jpeg' },
+            size: { type: 'integer', example: 245678 },
+            purpose: { type: 'string', example: 'DISPUTE_EVIDENCE' },
+          },
+        },
+        MobileHomeSummary: {
+          type: 'object',
+          properties: {
+            greeting_name: { type: 'string', example: 'Budi' },
+            cards: {
+              type: 'object',
+              properties: {
+                active_submissions: { type: 'integer', example: 3 },
+                waiting_qc: { type: 'integer', example: 1 },
+                qc_completed: { type: 'integer', example: 2 },
+                payment_pending: { type: 'integer', example: 1 },
+                active_disputes: { type: 'integer', example: 0 },
+              },
+            },
+            latest_submission: {
               type: 'object',
               nullable: true,
               properties: {
                 id: { type: 'string', format: 'uuid' },
-                code: { type: 'string' },
-                name: { type: 'string' },
-                address: { type: 'string', nullable: true },
+                submission_number: { type: 'string' },
+                commodity_name: { type: 'string' },
                 status: { type: 'string' },
+                status_label: { type: 'string' },
+                received_at: { type: 'string', format: 'date-time', nullable: true },
+              },
+            },
+            recent_activities: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  type: { type: 'string', example: 'QC_COMPLETED' },
+                  title: { type: 'string' },
+                  message: { type: 'string' },
+                  timestamp: { type: 'string', format: 'date-time' },
+                  related_entity_type: { type: 'string', nullable: true },
+                  related_entity_id: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        MobileQualityHistory: {
+          type: 'object',
+          properties: {
+            summary: {
+              type: 'object',
+              properties: {
+                total_submissions: { type: 'integer' },
+                average_grade: { type: 'string', nullable: true, example: 'A' },
+                average_price_per_kg: { type: 'number', nullable: true },
+                total_weight: { type: 'number' },
+                total_earnings: { type: 'number' },
+              },
+            },
+            trend: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  period: { type: 'string', example: '2026-06' },
+                  average_price_per_kg: { type: 'number' },
+                  total_weight: { type: 'number' },
+                  dominant_grade: { type: 'string', nullable: true },
+                },
+              },
+            },
+            insights: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string', example: 'QUALITY_IMPROVING' },
+                  title: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  submission_id: { type: 'string', format: 'uuid' },
+                  submission_number: { type: 'string' },
+                  commodity_name: { type: 'string' },
+                  received_at: { type: 'string', format: 'date-time', nullable: true },
+                  dominant_grade: { type: 'string', nullable: true },
+                  average_price_per_kg: { type: 'number', nullable: true },
+                  total_weight: { type: 'number' },
+                },
               },
             },
           },
