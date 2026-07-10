@@ -73,9 +73,9 @@ export async function GET(request: NextRequest) {
       prisma.farmerSale.findMany({
         where,
         include: {
-          farmer: { select: { id: true, name: true, farmer_number: true } },
+          farmer: { select: { id: true, name: true, farmer_number: true, photo_url: true } },
           representative: { select: { id: true, name: true } },
-          commodity: { select: { id: true, name: true, code: true } },
+          commodity: { select: { id: true, name: true, code: true, image_url: true } },
           commodity_variant: { select: { id: true, name: true } },
           cooperative: { select: { id: true, name: true } },
         },

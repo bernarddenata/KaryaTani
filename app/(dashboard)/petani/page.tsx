@@ -19,7 +19,7 @@ import { apiFetch } from '@/lib/utils/api-client'
 import { STATUS_LABELS, STATUS_COLORS, SELLER_TYPE_LABELS } from '@/lib/utils/format'
 import { ImageUpload } from '@/components/shared/image-upload'
 import { toast } from 'sonner'
-import { Plus, Pencil, Eye } from 'lucide-react'
+import { Plus, Pencil, Eye, User } from 'lucide-react'
 import Link from 'next/link'
 
 interface Farmer {
@@ -146,8 +146,25 @@ export default function PetaniPage() {
   }
 
   const columns: Column<Farmer>[] = [
-    { key: 'farmer_number', label: 'Nomor Petani' },
-    { key: 'name', label: 'Nama' },
+    {
+      key: 'name',
+      label: 'Petani',
+      render: (item) => (
+        <div className="flex items-center gap-3">
+          {item.photo_url ? (
+            <img src={item.photo_url} alt={item.name} className="h-10 w-10 rounded-full object-cover border" />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+              <User className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
+          <div>
+            <p className="font-medium">{item.name}</p>
+            <p className="text-xs text-muted-foreground">{item.farmer_number}</p>
+          </div>
+        </div>
+      ),
+    },
     { key: 'phone', label: 'Nomor HP' },
     { key: 'village', label: 'Desa', render: (item) => item.village || '-' },
     {

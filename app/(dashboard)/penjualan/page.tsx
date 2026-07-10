@@ -21,7 +21,7 @@ import {
   STATUS_LABELS, STATUS_COLORS,
 } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import { Plus, Eye } from 'lucide-react'
+import { Plus, Eye, User } from 'lucide-react'
 import Link from 'next/link'
 
 interface Sale {
@@ -34,9 +34,9 @@ interface Sale {
   status: string
   notes?: string
   created_at: string
-  farmer?: { id: string; name: string; farmer_number: string }
+  farmer?: { id: string; name: string; farmer_number: string; photo_url?: string }
   representative?: { id: string; name: string }
-  commodity?: { id: string; code: string; name: string }
+  commodity?: { id: string; code: string; name: string; image_url?: string }
   commodity_variant?: { id: string; code: string; name: string }
 }
 
@@ -243,7 +243,18 @@ export default function PenjualanPage() {
     {
       key: 'farmer',
       label: 'Pemilik Hasil Tani',
-      render: (item) => item.farmer?.name || '-',
+      render: (item) => (
+        <div className="flex items-center gap-2">
+          {item.farmer?.photo_url ? (
+            <img src={item.farmer.photo_url} alt={item.farmer.name} className="h-8 w-8 rounded-full object-cover border" />
+          ) : (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+              <User className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+          <span>{item.farmer?.name || '-'}</span>
+        </div>
+      ),
     },
     {
       key: 'representative',

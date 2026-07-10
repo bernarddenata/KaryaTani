@@ -16,7 +16,7 @@ import { ImageUpload } from '@/components/shared/image-upload'
 import { apiFetch } from '@/lib/utils/api-client'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import { Plus, Pencil, Eye } from 'lucide-react'
+import { Plus, Pencil, Eye, Wheat } from 'lucide-react'
 import Link from 'next/link'
 
 interface CommodityVariant {
@@ -122,8 +122,25 @@ export default function KomoditasPage() {
   }
 
   const columns: Column<Commodity>[] = [
-    { key: 'code', label: 'Kode' },
-    { key: 'name', label: 'Nama' },
+    {
+      key: 'name',
+      label: 'Komoditas',
+      render: (item) => (
+        <div className="flex items-center gap-3">
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} className="h-10 w-10 rounded-lg object-cover border" />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <Wheat className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
+          <div>
+            <p className="font-medium">{item.name}</p>
+            <p className="text-xs text-muted-foreground">{item.code}</p>
+          </div>
+        </div>
+      ),
+    },
     { key: 'category', label: 'Kategori', render: (item) => item.category || '-' },
     { key: 'default_unit', label: 'Satuan Default' },
     {
