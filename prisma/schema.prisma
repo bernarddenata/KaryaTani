@@ -1,0 +1,690 @@
+// ============================================================================
+// Karya Tani Center - Prisma Schema
+// Platform untuk pencatatan penjualan hasil tani petani ke koperasi
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTH & ACCESS CONTROL
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  password_hash String
+  status        String    @default("ACTIVE")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  last_login_at DateTime?
+
+  // Relations
+  user_roles            UserRole[]
+  received_sales        FarmerSale[]           @relation("ReceivedBySales")
+  uploaded_sale_photos  FarmerSalePhoto[]      @relation("UploadedByPhotos")
+  qc_results_as_officer QcResult[]             @relation("QcOfficerResults")
+  wallet_mutations      FarmerWalletMutation[] @relation("CreatedByMutations")
+  paid_payouts          FarmerPayout[]         @relation("PaidByPayouts")
+  reviewed_disputes     Dispute[]              @relation("ReviewedByDisputes")
+  uploaded_files        FileUpload[]           @relation("UploadedByFiles")
+  notifications         Notification[]         @relation("UserNotifications")
+  audit_logs            AuditLog[]             @relation("ActorAuditLogs")
+
+  @@map("KaryaTani_users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  status      String   @default("ACTIVE")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  role_permissions RolePermission[]
+  user_roles       UserRole[]
+
+  @@map("KaryaTani_roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  module      String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  role_permissions RolePermission[]
+
+  @@map("KaryaTani_permissions")
+}
+
+model RolePermission {
+  id            String   @id @default(uuid())
+  role_id       String
+  permission_id String
+  created_at    DateTime @default(now())
+
+  // Relations
+  role       Role       @relation(fields: [role_id], references: [id])
+  permission Permission @relation(fields: [permission_id], references: [id])
+
+  @@index([role_id])
+  @@index([permission_id])
+  @@map("KaryaTani_role_permissions")
+}
+
+model UserRole {
+  id         String   @id @default(uuid())
+  user_id    String
+  role_id    String
+  created_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+  role Role @relation(fields: [role_id], references: [id])
+
+  @@index([user_id])
+  @@index([role_id])
+  @@map("KaryaTani_user_roles")
+}
+
+// ============================================================================
+// COOPERATIVE & FARMER
+// ============================================================================
+
+model Cooperative {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  province     String?
+  city         String?
+  district     String?
+  village      String?
+  address      String?
+  legal_number String?
+  status       String   @default("ACTIVE")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  farmers          Farmer[]
+  price_lists      PriceList[]
+  qc_templates     QcTemplate[]
+  farmer_sales     FarmerSale[]
+  qc_results       QcResult[]
+  farmer_wallets   FarmerWallet[]
+  wallet_mutations FarmerWalletMutation[]
+  farmer_payouts   FarmerPayout[]
+  disputes         Dispute[]
+
+  @@map("KaryaTani_cooperatives")
+}
+
+model Farmer {
+  id                  String   @id @default(uuid())
+  cooperative_id      String
+  farmer_number       String   @unique
+  name                String
+  phone               String
+  nik                 String?
+  address             String?
+  village             String?
+  seller_type         String
+  verification_status String   @default("BELUM_DIVERIFIKASI")
+  status              String   @default("ACTIVE")
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  // Relations
+  cooperative      Cooperative            @relation(fields: [cooperative_id], references: [id])
+  representatives  FarmerRepresentative[]
+  sources          FarmerSource[]
+  farmer_sales     FarmerSale[]
+  qc_results       QcResult[]
+  farmer_wallets   FarmerWallet[]
+  wallet_mutations FarmerWalletMutation[]
+  farmer_payouts   FarmerPayout[]
+  disputes         Dispute[]
+  notifications    Notification[]         @relation("FarmerNotifications")
+
+  @@index([cooperative_id])
+  @@map("KaryaTani_farmers")
+}
+
+model FarmerRepresentative {
+  id                String   @id @default(uuid())
+  farmer_id         String
+  name              String
+  phone             String?
+  relationship_type String
+  identity_number   String?
+  status            String   @default("ACTIVE")
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  farmer       Farmer       @relation(fields: [farmer_id], references: [id])
+  farmer_sales FarmerSale[]
+
+  @@index([farmer_id])
+  @@map("KaryaTani_farmer_representatives")
+}
+
+model FarmerSource {
+  id                  String   @id @default(uuid())
+  farmer_id           String
+  source_type         String
+  location            String?
+  land_area           String?
+  main_commodity_id   String?
+  proof_file_id       String?
+  verification_status String   @default("BELUM_DIVERIFIKASI")
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  // Relations
+  farmer         Farmer      @relation(fields: [farmer_id], references: [id])
+  main_commodity Commodity?  @relation(fields: [main_commodity_id], references: [id])
+  proof_file     FileUpload? @relation("SourceProofFile", fields: [proof_file_id], references: [id])
+
+  @@index([farmer_id])
+  @@index([main_commodity_id])
+  @@index([proof_file_id])
+  @@map("KaryaTani_farmer_sources")
+}
+
+// ============================================================================
+// COMMODITY & PRICING
+// ============================================================================
+
+model Commodity {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  category     String?
+  default_unit String
+  description  String?
+  status       String   @default("ACTIVE")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  variants         CommodityVariant[]
+  farmer_sources   FarmerSource[]
+  price_list_items PriceListItem[]
+  qc_templates     QcTemplate[]
+  farmer_sales     FarmerSale[]
+
+  @@map("KaryaTani_commodities")
+}
+
+model CommodityVariant {
+  id           String   @id @default(uuid())
+  commodity_id String
+  code         String   @unique
+  name         String
+  unit         String
+  description  String?
+  status       String   @default("ACTIVE")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  commodity        Commodity       @relation(fields: [commodity_id], references: [id])
+  price_list_items PriceListItem[]
+  qc_templates     QcTemplate[]
+  farmer_sales     FarmerSale[]
+
+  @@index([commodity_id])
+  @@map("KaryaTani_commodity_variants")
+}
+
+model PriceList {
+  id             String    @id @default(uuid())
+  cooperative_id String
+  name           String
+  valid_from     DateTime
+  valid_until    DateTime?
+  status         String    @default("DRAFT")
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  // Relations
+  cooperative  Cooperative     @relation(fields: [cooperative_id], references: [id])
+  items        PriceListItem[]
+  farmer_sales FarmerSale[]
+
+  @@index([cooperative_id])
+  @@map("KaryaTani_price_lists")
+}
+
+model PriceListItem {
+  id                   String   @id @default(uuid())
+  price_list_id        String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_name           String
+  grade_code           String
+  price_per_unit       Decimal
+  unit                 String
+  is_reject            Boolean  @default(false)
+  sort_order           Int      @default(0)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  // Relations
+  price_list        PriceList         @relation(fields: [price_list_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+
+  @@index([price_list_id])
+  @@index([commodity_id])
+  @@index([commodity_variant_id])
+  @@map("KaryaTani_price_list_items")
+}
+
+// ============================================================================
+// QC TEMPLATES
+// ============================================================================
+
+model QcTemplate {
+  id                   String    @id @default(uuid())
+  cooperative_id       String
+  commodity_id         String
+  commodity_variant_id String?
+  name                 String
+  version              Int       @default(1)
+  valid_from           DateTime
+  valid_until          DateTime?
+  status               String    @default("DRAFT")
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  // Relations
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+  items             QcTemplateItem[]
+  farmer_sales      FarmerSale[]
+  qc_results        QcResult[]
+
+  @@index([cooperative_id])
+  @@index([commodity_id])
+  @@index([commodity_variant_id])
+  @@map("KaryaTani_qc_templates")
+}
+
+model QcTemplateItem {
+  id             String   @id @default(uuid())
+  qc_template_id String
+  item_name      String
+  item_code      String
+  input_type     String
+  is_required    Boolean  @default(true)
+  requires_proof Boolean  @default(false)
+  options_json   Json?
+  min_value      Float?
+  max_value      Float?
+  help_text      String?
+  sort_order     Int      @default(0)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  // Relations
+  qc_template     QcTemplate     @relation(fields: [qc_template_id], references: [id])
+  qc_result_items QcResultItem[]
+
+  @@index([qc_template_id])
+  @@map("KaryaTani_qc_template_items")
+}
+
+// ============================================================================
+// FARMER SALES & QC
+// ============================================================================
+
+model FarmerSale {
+  id                   String    @id @default(uuid())
+  cooperative_id       String
+  farmer_id            String
+  representative_id    String?
+  commodity_id         String
+  commodity_variant_id String?
+  price_list_id        String?
+  qc_template_id       String?
+  sale_number          String    @unique
+  batch_number         String
+  initial_weight       Decimal?
+  received_weight      Decimal?
+  total_amount         Decimal?
+  status               String    @default("DRAFT")
+  notes                String?
+  received_by_user_id  String?
+  received_at          DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  // Relations
+  cooperative       Cooperative           @relation(fields: [cooperative_id], references: [id])
+  farmer            Farmer                @relation(fields: [farmer_id], references: [id])
+  representative    FarmerRepresentative? @relation(fields: [representative_id], references: [id])
+  commodity         Commodity             @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant?     @relation(fields: [commodity_variant_id], references: [id])
+  price_list        PriceList?            @relation(fields: [price_list_id], references: [id])
+  qc_template       QcTemplate?           @relation(fields: [qc_template_id], references: [id])
+  received_by       User?                 @relation("ReceivedBySales", fields: [received_by_user_id], references: [id])
+  photos            FarmerSalePhoto[]
+  qc_results        QcResult[]
+  disputes          Dispute[]
+
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@index([representative_id])
+  @@index([commodity_id])
+  @@index([commodity_variant_id])
+  @@index([price_list_id])
+  @@index([qc_template_id])
+  @@index([received_by_user_id])
+  @@map("KaryaTani_farmer_sales")
+}
+
+model FarmerSalePhoto {
+  id                  String   @id @default(uuid())
+  farmer_sale_id      String
+  file_id             String
+  photo_type          String
+  uploaded_by_user_id String?
+  created_at          DateTime @default(now())
+
+  // Relations
+  farmer_sale FarmerSale @relation(fields: [farmer_sale_id], references: [id])
+  file        FileUpload @relation("SalePhotoFile", fields: [file_id], references: [id])
+  uploaded_by User?      @relation("UploadedByPhotos", fields: [uploaded_by_user_id], references: [id])
+
+  @@index([farmer_sale_id])
+  @@index([file_id])
+  @@index([uploaded_by_user_id])
+  @@map("KaryaTani_farmer_sale_photos")
+}
+
+model QcResult {
+  id                     String    @id @default(uuid())
+  farmer_sale_id         String
+  cooperative_id         String
+  farmer_id              String
+  qc_template_id         String
+  qc_officer_user_id     String?
+  recommended_grade_code String?
+  final_grade_code       String?
+  total_weight_checked   Decimal?
+  final_accepted_weight  Decimal?
+  total_rejected_weight  Decimal?
+  notes                  String?
+  status                 String    @default("DRAFT")
+  submitted_at           DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  // Relations
+  farmer_sale      FarmerSale         @relation(fields: [farmer_sale_id], references: [id])
+  cooperative      Cooperative        @relation(fields: [cooperative_id], references: [id])
+  farmer           Farmer             @relation(fields: [farmer_id], references: [id])
+  qc_template      QcTemplate         @relation(fields: [qc_template_id], references: [id])
+  qc_officer       User?              @relation("QcOfficerResults", fields: [qc_officer_user_id], references: [id])
+  items            QcResultItem[]
+  grade_breakdowns QcGradeBreakdown[]
+  disputes         Dispute[]
+
+  @@index([farmer_sale_id])
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@index([qc_template_id])
+  @@index([qc_officer_user_id])
+  @@map("KaryaTani_qc_results")
+}
+
+model QcResultItem {
+  id                  String   @id @default(uuid())
+  qc_result_id        String
+  qc_template_item_id String
+  value_text          String?
+  value_number        Float?
+  value_json          Json?
+  notes               String?
+  proof_file_id       String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  // Relations
+  qc_result        QcResult       @relation(fields: [qc_result_id], references: [id])
+  qc_template_item QcTemplateItem @relation(fields: [qc_template_item_id], references: [id])
+  proof_file       FileUpload?    @relation("ResultItemProofFile", fields: [proof_file_id], references: [id])
+
+  @@index([qc_result_id])
+  @@index([qc_template_item_id])
+  @@index([proof_file_id])
+  @@map("KaryaTani_qc_result_items")
+}
+
+model QcGradeBreakdown {
+  id               String   @id @default(uuid())
+  qc_result_id     String
+  grade_name       String
+  grade_code       String
+  weight           Decimal
+  price_per_unit   Decimal?
+  estimated_amount Decimal?
+  reason           String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relations
+  qc_result QcResult @relation(fields: [qc_result_id], references: [id])
+
+  @@index([qc_result_id])
+  @@map("KaryaTani_qc_grade_breakdowns")
+}
+
+// ============================================================================
+// WALLET & PAYOUT
+// ============================================================================
+
+model FarmerWallet {
+  id                String   @id @default(uuid())
+  cooperative_id    String
+  farmer_id         String
+  available_balance Decimal  @default(0)
+  held_balance      Decimal  @default(0)
+  total_paid        Decimal  @default(0)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  cooperative Cooperative            @relation(fields: [cooperative_id], references: [id])
+  farmer      Farmer                 @relation(fields: [farmer_id], references: [id])
+  mutations   FarmerWalletMutation[]
+  payouts     FarmerPayout[]
+
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@map("KaryaTani_farmer_wallets")
+}
+
+model FarmerWalletMutation {
+  id                 String   @id @default(uuid())
+  cooperative_id     String
+  farmer_id          String
+  wallet_id          String
+  mutation_type      String
+  reference_type     String?
+  reference_id       String?
+  amount_in          Decimal  @default(0)
+  amount_out         Decimal  @default(0)
+  balance_before     Decimal
+  balance_after      Decimal
+  notes              String?
+  created_by_user_id String?
+  created_at         DateTime @default(now())
+
+  // Relations
+  cooperative Cooperative  @relation(fields: [cooperative_id], references: [id])
+  farmer      Farmer       @relation(fields: [farmer_id], references: [id])
+  wallet      FarmerWallet @relation(fields: [wallet_id], references: [id])
+  created_by  User?        @relation("CreatedByMutations", fields: [created_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@index([wallet_id])
+  @@index([created_by_user_id])
+  @@map("KaryaTani_farmer_wallet_mutations")
+}
+
+model FarmerPayout {
+  id                 String    @id @default(uuid())
+  cooperative_id     String
+  farmer_id          String
+  wallet_id          String
+  payout_number      String    @unique
+  amount             Decimal
+  payout_method      String
+  transfer_reference String?
+  proof_file_id      String?
+  status             String    @default("BELUM_DIBAYAR")
+  paid_by_user_id    String?
+  paid_at            DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  // Relations
+  cooperative Cooperative  @relation(fields: [cooperative_id], references: [id])
+  farmer      Farmer       @relation(fields: [farmer_id], references: [id])
+  wallet      FarmerWallet @relation(fields: [wallet_id], references: [id])
+  proof_file  FileUpload?  @relation("PayoutProofFile", fields: [proof_file_id], references: [id])
+  paid_by     User?        @relation("PaidByPayouts", fields: [paid_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@index([wallet_id])
+  @@index([proof_file_id])
+  @@index([paid_by_user_id])
+  @@map("KaryaTani_farmer_payouts")
+}
+
+// ============================================================================
+// DISPUTES
+// ============================================================================
+
+model Dispute {
+  id                  String    @id @default(uuid())
+  cooperative_id      String
+  farmer_id           String
+  farmer_sale_id      String
+  qc_result_id        String?
+  dispute_number      String    @unique
+  reason_category     String
+  farmer_note         String
+  status              String    @default("DIKIRIM")
+  reviewed_by_user_id String?
+  manager_decision    String?
+  resolution_note     String?
+  resolved_at         DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  // Relations
+  cooperative Cooperative @relation(fields: [cooperative_id], references: [id])
+  farmer      Farmer      @relation(fields: [farmer_id], references: [id])
+  farmer_sale FarmerSale  @relation(fields: [farmer_sale_id], references: [id])
+  qc_result   QcResult?   @relation(fields: [qc_result_id], references: [id])
+  reviewed_by User?       @relation("ReviewedByDisputes", fields: [reviewed_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([farmer_id])
+  @@index([farmer_sale_id])
+  @@index([qc_result_id])
+  @@index([reviewed_by_user_id])
+  @@map("KaryaTani_disputes")
+}
+
+// ============================================================================
+// FILES, NOTIFICATIONS & AUDIT
+// ============================================================================
+
+model FileUpload {
+  id                  String   @id @default(uuid())
+  file_url            String
+  file_name           String
+  file_type           String
+  file_size           Int
+  storage_provider    String
+  uploaded_by_user_id String?
+  entity_type         String?
+  entity_id           String?
+  created_at          DateTime @default(now())
+
+  // Relations
+  uploaded_by        User?             @relation("UploadedByFiles", fields: [uploaded_by_user_id], references: [id])
+  source_proof_files FarmerSource[]    @relation("SourceProofFile")
+  sale_photo_files   FarmerSalePhoto[] @relation("SalePhotoFile")
+  result_item_proofs QcResultItem[]    @relation("ResultItemProofFile")
+  payout_proof_files FarmerPayout[]    @relation("PayoutProofFile")
+
+  @@index([uploaded_by_user_id])
+  @@map("KaryaTani_files")
+}
+
+model Notification {
+  id                  String   @id @default(uuid())
+  user_id             String?
+  farmer_id           String?
+  title               String
+  message             String
+  notification_type   String
+  related_entity_type String?
+  related_entity_id   String?
+  is_read             Boolean  @default(false)
+  created_at          DateTime @default(now())
+
+  // Relations
+  user   User?   @relation("UserNotifications", fields: [user_id], references: [id])
+  farmer Farmer? @relation("FarmerNotifications", fields: [farmer_id], references: [id])
+
+  @@index([user_id])
+  @@index([farmer_id])
+  @@map("KaryaTani_notifications")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  actor_user_id String?
+  entity_type   String
+  entity_id     String?
+  action        String
+  before_json   Json?
+  after_json    Json?
+  source_client String
+  ip_address    String?
+  user_agent    String?
+  created_at    DateTime @default(now())
+
+  // Relations
+  actor User? @relation("ActorAuditLogs", fields: [actor_user_id], references: [id])
+
+  @@index([actor_user_id])
+  @@index([entity_type, entity_id])
+  @@map("KaryaTani_audit_logs")
+}
