@@ -594,22 +594,21 @@ async function main() {
     console.log('✅ Demo sale 2 (Bu Sari - Beras Medium, menunggu QC) seeded')
   }
 
-  // 11. Third demo sale - Pak Joko, Kopi, waiting for QC
+  // 11. Third demo sale - Pak Joko, Kopi, waiting for QC (di KOP-002)
   const pakJoko = farmers['PTN-003']
   const existingSale3 = await prisma.farmerSale.findFirst({ where: { sale_number: 'JUAL-20260710-0003' } })
   if (!existingSale3) {
     await prisma.farmerSale.create({
       data: {
-        cooperative_id: cooperative.id, farmer_id: pakJoko.id,
+        cooperative_id: pakJoko.cooperative_id, farmer_id: pakJoko.id,
         commodity_id: commodities['KOPI'].id, commodity_variant_id: variants['KOPI-ARA'].id,
-        price_list_id: priceList.id,
         sale_number: 'JUAL-20260710-0003', batch_number: 'BATCH-KOPI-20260710-0001',
         initial_weight: 30, received_weight: 28,
         status: 'MENUNGGU_QC', notes: 'Kopi arabika dari Pak Joko',
         received_by_user_id: adminUser.id, received_at: new Date(),
       },
     })
-    console.log('✅ Demo sale 3 (Pak Joko - Kopi Arabika, menunggu QC) seeded')
+    console.log('✅ Demo sale 3 (Pak Joko - Kopi Arabika, KOP-002, menunggu QC) seeded')
   }
 
   // Create wallets for other farmers
