@@ -332,10 +332,10 @@ async function main() {
       image_url: wm('Soybean.USDA.jpg'), variants: [] },
     { code: 'KACANG-TANAH', name: 'Kacang Tanah', category: 'Hasil Tani', default_unit: 'kg',
       description: 'Kacang tanah dengan atau tanpa kulit.',
-      image_url: wm('Peanuts_(Rasbak).jpg'), variants: [] },
+      image_url: wm('Arachis_hypogaea_003.JPG'), variants: [] },
     { code: 'CABAI', name: 'Cabai', category: 'Hasil Tani', default_unit: 'kg',
       description: 'Cabai segar dari petani, berbagai varian.',
-      image_url: wm('Piri_piri_from_Mozambique.jpg'), variants: [
+      image_url: wm('Capsicum_annuum_fruits_IMGP0049.jpg'), variants: [
       { code: 'CABAI-MK', name: 'Cabai Merah Keriting', unit: 'kg' },
       { code: 'CABAI-RM', name: 'Cabai Rawit Merah', unit: 'kg' },
       { code: 'CABAI-BSR', name: 'Cabai Merah Besar', unit: 'kg' },
@@ -379,13 +379,13 @@ async function main() {
     ]},
     { code: 'KARET', name: 'Karet', category: 'Hasil Kebun', default_unit: 'kg',
       description: 'Lateks atau bokar karet.',
-      image_url: wm('Hevea_brasiliensis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-072.jpg'), variants: [
+      image_url: wm('Rubber_tapping_2.jpg'), variants: [
       { code: 'KARET-BKR', name: 'Bokar', unit: 'kg' },
       { code: 'KARET-LTX', name: 'Lateks Cair', unit: 'liter' },
     ]},
     { code: 'TEH', name: 'Teh', category: 'Hasil Kebun', default_unit: 'kg',
       description: 'Pucuk daun teh basah dari kebun.',
-      image_url: wm('Camellia_sinensis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-025.jpg'), variants: [] },
+      image_url: wm('Tea_leaves.jpg'), variants: [] },
     { code: 'KELAPA', name: 'Kelapa', category: 'Hasil Kebun', default_unit: 'butir',
       description: 'Kelapa utuh atau kopra kering.',
       image_url: wm('Coconut_and_oil.jpg'), variants: [
@@ -415,13 +415,13 @@ async function main() {
       image_url: wm('Vanilla_6beans.JPG'), variants: [] },
     { code: 'LADA', name: 'Lada', category: 'Hasil Kebun', default_unit: 'kg',
       description: 'Lada hitam atau lada putih kering.',
-      image_url: wm('Pepper_(Piper_nigrum).jpg'), variants: [
+      image_url: wm('Black_pepper.jpg'), variants: [
       { code: 'LADA-HTM', name: 'Lada Hitam', unit: 'kg' },
       { code: 'LADA-PTH', name: 'Lada Putih', unit: 'kg' },
     ]},
     { code: 'CENGKEH', name: 'Cengkeh', category: 'Hasil Kebun', default_unit: 'kg',
       description: 'Bunga cengkeh kering.',
-      image_url: wm('Cloves.jpg'), variants: [] },
+      image_url: wm('Cengkeh.jpg'), variants: [] },
     { code: 'PALA', name: 'Pala', category: 'Hasil Kebun', default_unit: 'kg',
       description: 'Biji pala dan fuli.',
       image_url: wm('Muscade.jpg'), variants: [] },
@@ -429,7 +429,7 @@ async function main() {
     // ============= HASIL TERNAK =============
     { code: 'SAPI-POTONG', name: 'Sapi Potong', category: 'Hasil Ternak', default_unit: 'ekor',
       description: 'Sapi hidup siap potong (bobot hidup).',
-      image_url: wm('Beefmaster_bull.jpg'), variants: [] },
+      image_url: wm('Angus_cattle_18.jpg'), variants: [] },
     { code: 'SAPI-PERAH', name: 'Sapi Perah', category: 'Hasil Ternak', default_unit: 'ekor',
       description: 'Sapi perah produksi susu.',
       image_url: wm('Cow_female_black_white.jpg'), variants: [] },
@@ -447,7 +447,7 @@ async function main() {
       image_url: wm('Ayam_Kampung.jpg'), variants: [] },
     { code: 'AYAM-BLR', name: 'Ayam Broiler', category: 'Hasil Ternak', default_unit: 'kg',
       description: 'Ayam pedaging (broiler) hidup atau karkas.',
-      image_url: wm('Meat_chicken.jpg'), variants: [] },
+      image_url: wm('Poultry_farm.jpg'), variants: [] },
     { code: 'BEBEK', name: 'Bebek / Itik', category: 'Hasil Ternak', default_unit: 'ekor',
       description: 'Bebek atau itik pedaging maupun petelur.',
       image_url: wm('Anas_platyrhynchos_male_female_quadrat.jpg'), variants: [] },
@@ -456,13 +456,13 @@ async function main() {
       image_url: wm('Milk_glass.jpg'), variants: [] },
     { code: 'TELUR-AYM', name: 'Telur Ayam', category: 'Hasil Ternak', default_unit: 'kg',
       description: 'Telur ayam ras atau kampung.',
-      image_url: wm('Eggs2.jpg'), variants: [
+      image_url: wm('Chicken_eggs.jpg'), variants: [
       { code: 'TELUR-RAS', name: 'Telur Ayam Ras', unit: 'kg' },
       { code: 'TELUR-KPG', name: 'Telur Ayam Kampung', unit: 'kg' },
     ]},
     { code: 'TELUR-BBK', name: 'Telur Bebek', category: 'Hasil Ternak', default_unit: 'butir',
       description: 'Telur itik untuk konsumsi atau bahan asinan.',
-      image_url: wm('Duck_egg.jpg'), variants: [] },
+      image_url: wm('Anas_platyrhynchos_egg.jpg'), variants: [] },
     { code: 'MADU', name: 'Madu', category: 'Hasil Ternak', default_unit: 'kg',
       description: 'Madu murni dari lebah ternak.',
       image_url: wm('Honey_comb.jpg'), variants: [] },
