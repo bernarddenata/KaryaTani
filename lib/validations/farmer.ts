@@ -19,6 +19,7 @@ export const createFarmerSchema = z.object({
   address: z.string().optional(),
   village: z.string().optional(),
   seller_type: sellerTypeEnum,
+  photo_url: z.string().url().optional().or(z.literal('')).transform(v => v || undefined),
   verification_status: z.string().optional(),
 })
 

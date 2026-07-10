@@ -42,6 +42,9 @@ interface QcItem {
   value_number?: number | string
   value_json?: any
   notes?: string
+  qc_template_item?: {
+    input_type?: string
+  }
 }
 
 interface QcResult {
@@ -151,16 +154,21 @@ export default function PenjualanDetailPage() {
     const files = e.target.files
     if (!files || files.length === 0) return
     setUploadLoading(true)
-    const formData = new FormData()
+    let hasError = false
     for (let i = 0; i < files.length; i++) {
-      formData.append('photos', files[i])
+      const formData = new FormData()
+      formData.append('file', files[i])
+      formData.append('photo_type', 'FOTO_PENERIMAAN')
+      const res = await apiUpload(`/api/farmer-sales/${id}/photos`, formData)
+      if (!res.success) {
+        toast.error(res.error?.message || 'Gagal mengunggah foto')
+        hasError = true
+        break
+      }
     }
-    const res = await apiUpload(`/api/farmer-sales/${id}/photos`, formData)
-    if (res.success) {
+    if (!hasError) {
       toast.success('Foto berhasil diunggah')
       fetchData()
-    } else {
-      toast.error(res.error?.message || 'Gagal mengunggah foto')
     }
     setUploadLoading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -462,7 +470,19 @@ export default function PenjualanDetailPage() {
                             {qcResult.items.map((item) => (
                               <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.item_name}</TableCell>
-                                <TableCell>{item.value_text || item.value_number || '-'}</TableCell>
+                                <TableCell>
+                                  {item.qc_template_item?.input_type === 'FOTO' && item.value_text ? (
+                                    <a href={item.value_text} target="_blank" rel="noopener noreferrer">
+                                      <img
+                                        src={item.value_text}
+                                        alt={item.item_name}
+                                        className="h-20 w-20 rounded border object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    item.value_text || item.value_number || '-'
+                                  )}
+                                </TableCell>
                                 <TableCell>{item.notes || '-'}</TableCell>
                               </TableRow>
                             ))}

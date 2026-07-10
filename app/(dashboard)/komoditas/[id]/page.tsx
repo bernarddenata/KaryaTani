@@ -26,6 +26,7 @@ interface Commodity {
   category?: string
   default_unit: string
   description?: string
+  image_url?: string | null
   status: string
   created_at: string
   variants?: CommodityVariant[]
@@ -197,6 +198,15 @@ export default function KomoditasDetailPage() {
               <CardTitle>{commodity.name}</CardTitle>
             </CardHeader>
             <CardContent>
+              {commodity.image_url && (
+                <div className="mb-4">
+                  <img
+                    src={commodity.image_url}
+                    alt={commodity.name}
+                    className="h-40 w-40 rounded-lg border object-cover"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Kode</p>

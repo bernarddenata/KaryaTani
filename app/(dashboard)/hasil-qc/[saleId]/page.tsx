@@ -25,6 +25,7 @@ import {
 } from '@/lib/utils/format'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
+import { ImageUpload } from '@/components/shared/image-upload'
 
 /* ---------- types ---------- */
 
@@ -551,9 +552,18 @@ export default function HasilQcFormPage() {
 
                           {/* FOTO */}
                           {item.input_type === 'FOTO' && (
-                            <div className="border border-dashed rounded-lg p-4 text-center text-gray-400 text-sm">
-                              Upload foto (segera hadir)
-                            </div>
+                            <ImageUpload
+                              value={val.value_text || null}
+                              onUploaded={(fileUrl) =>
+                                setItemField(item.id, 'value_text', fileUrl)
+                              }
+                              onRemoved={() =>
+                                setItemField(item.id, 'value_text', '')
+                              }
+                              entityType="QcResult"
+                              entityId={saleId}
+                              disabled={sale?.status === 'QC_SELESAI'}
+                            />
                           )}
 
                           {/* CATATAN */}

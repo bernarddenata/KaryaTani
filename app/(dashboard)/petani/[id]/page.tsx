@@ -14,7 +14,7 @@ import {
   formatRupiah, formatDate, formatDateTime,
   STATUS_LABELS, STATUS_COLORS, SELLER_TYPE_LABELS, RELATIONSHIP_TYPE_LABELS,
 } from '@/lib/utils/format'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, User } from 'lucide-react'
 
 interface Farmer {
   id: string
@@ -26,6 +26,7 @@ interface Farmer {
   address?: string
   village?: string
   seller_type: string
+  photo_url?: string
   verification_status: string
   status: string
   created_at: string
@@ -232,8 +233,23 @@ export default function PetaniDetailPage() {
           {/* Profile Card */}
           <Card>
             <CardHeader>
-              <CardTitle>{farmer.name}</CardTitle>
-              <p className="text-sm text-gray-500">{farmer.farmer_number}</p>
+              <div className="flex items-center gap-4">
+                {farmer.photo_url ? (
+                  <img
+                    src={farmer.photo_url}
+                    alt={farmer.name}
+                    className="h-16 w-16 rounded-full border object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-muted">
+                    <User className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <CardTitle>{farmer.name}</CardTitle>
+                  <p className="text-sm text-gray-500">{farmer.farmer_number}</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { ImageUpload } from '@/components/shared/image-upload'
 import { apiFetch } from '@/lib/utils/api-client'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/format'
 import { toast } from 'sonner'
@@ -35,6 +36,7 @@ interface Commodity {
   category?: string
   default_unit: string
   description?: string
+  image_url?: string | null
   status: string
   variants?: CommodityVariant[]
 }
@@ -45,6 +47,7 @@ const INITIAL_FORM = {
   category: '',
   default_unit: 'kg',
   description: '',
+  image_url: '' as string | null,
 }
 
 export default function KomoditasPage() {
@@ -74,7 +77,8 @@ export default function KomoditasPage() {
     setSaving(true)
     const url = editingItem ? `/api/commodities/${editingItem.id}` : '/api/commodities'
     const method = editingItem ? 'PATCH' : 'POST'
-    const res = await apiFetch(url, { method, body: formData })
+    const payload = { ...formData, image_url: formData.image_url || null }
+    const res = await apiFetch(url, { method, body: payload })
     if (res.success) {
       toast.success(editingItem ? 'Data komoditas berhasil diperbarui.' : 'Data komoditas berhasil ditambahkan.')
       setDialogOpen(false)
@@ -101,6 +105,7 @@ export default function KomoditasPage() {
       category: item.category || '',
       default_unit: item.default_unit,
       description: item.description || '',
+      image_url: item.image_url || null,
     })
     setDialogOpen(true)
   }
@@ -223,6 +228,17 @@ export default function KomoditasPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Opsional"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Foto Komoditas</Label>
+              <ImageUpload
+                value={formData.image_url}
+                onUploaded={(fileUrl) => setFormData({ ...formData, image_url: fileUrl })}
+                onRemoved={() => setFormData({ ...formData, image_url: null })}
+                entityType="commodity"
+                entityId={editingItem?.id}
               />
             </div>
           </div>

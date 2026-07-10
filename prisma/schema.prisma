@@ -145,6 +145,7 @@ model Farmer {
   address             String?
   village             String?
   seller_type         String
+  photo_url           String?
   verification_status String   @default("BELUM_DIVERIFIKASI")
   status              String   @default("ACTIVE")
   created_at          DateTime @default(now())
@@ -219,6 +220,7 @@ model Commodity {
   category     String?
   default_unit String
   description  String?
+  image_url    String?
   status       String   @default("ACTIVE")
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { apiFetch } from '@/lib/utils/api-client'
 import { STATUS_LABELS, STATUS_COLORS, SELLER_TYPE_LABELS } from '@/lib/utils/format'
+import { ImageUpload } from '@/components/shared/image-upload'
 import { toast } from 'sonner'
 import { Plus, Pencil, Eye } from 'lucide-react'
 import Link from 'next/link'
@@ -31,6 +32,7 @@ interface Farmer {
   address?: string
   village?: string
   seller_type: string
+  photo_url?: string
   verification_status: string
   status: string
   cooperative?: { id: string; code: string; name: string }
@@ -51,6 +53,7 @@ const INITIAL_FORM = {
   address: '',
   village: '',
   seller_type: 'PEMILIK_LAHAN',
+  photo_url: '',
   verification_status: 'BELUM_DIVERIFIKASI',
 }
 
@@ -125,6 +128,7 @@ export default function PetaniPage() {
       address: item.address || '',
       village: item.village || '',
       seller_type: item.seller_type,
+      photo_url: item.photo_url || '',
       verification_status: item.verification_status,
     })
     setDialogOpen(true)
@@ -213,6 +217,18 @@ export default function PetaniPage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Foto Profil</Label>
+              <ImageUpload
+                value={formData.photo_url || null}
+                onUploaded={(fileUrl) => setFormData({ ...formData, photo_url: fileUrl })}
+                onRemoved={() => setFormData({ ...formData, photo_url: '' })}
+                entityType="Farmer"
+                entityId={editingItem?.id}
+                disabled={saving}
+              />
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="cooperative_id">Koperasi</Label>
               <Select

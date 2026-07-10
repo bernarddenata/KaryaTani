@@ -6,6 +6,7 @@ export const createCommoditySchema = z.object({
   category: z.string().optional(),
   default_unit: z.string().min(1, 'Satuan default wajib diisi.'),
   description: z.string().optional(),
+  image_url: z.string().optional().nullable(),
 })
 
 export type CreateCommodityInput = z.infer<typeof createCommoditySchema>
