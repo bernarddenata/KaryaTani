@@ -60,32 +60,45 @@ export const STATUS_LABELS: Record<string, string> = {
   GAGAL_TRANSFER: 'Gagal Transfer',
 }
 
+// Status badge recipe (design-tokens.md §5): bg = color @ ~15% alpha, fg = color.
+const BADGE_SUCCESS = 'bg-primary/15 text-primary'
+const BADGE_WARNING = 'bg-warning/20 text-[#8A6414]'
+const BADGE_ORANGE = 'bg-orange/15 text-[#A05E12]'
+const BADGE_DANGER = 'bg-destructive/15 text-destructive'
+const BADGE_INFO = 'bg-info/15 text-info'
+const BADGE_MUTED = 'bg-muted text-muted-foreground'
+
 export const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: 'bg-cyan-100 text-cyan-800',
-  INACTIVE: 'bg-gray-100 text-gray-800',
-  DRAFT: 'bg-gray-100 text-gray-800',
-  AKTIF: 'bg-cyan-100 text-cyan-800',
-  NONAKTIF: 'bg-gray-100 text-gray-800',
-  KEDALUWARSA: 'bg-orange-100 text-orange-800',
-  TERVERIFIKASI: 'bg-cyan-100 text-cyan-800',
-  BELUM_DIVERIFIKASI: 'bg-yellow-100 text-yellow-800',
-  MENUNGGU_VERIFIKASI: 'bg-blue-100 text-blue-800',
-  DITOLAK: 'bg-red-100 text-red-800',
-  MENUNGGU_QC: 'bg-yellow-100 text-yellow-800',
-  QC_DIPROSES: 'bg-blue-100 text-blue-800',
-  QC_SELESAI: 'bg-cyan-100 text-cyan-800',
-  HARGA_DIHITUNG: 'bg-cyan-100 text-cyan-800',
-  MENUNGGU_PEMBAYARAN: 'bg-orange-100 text-orange-800',
-  DIBAYAR: 'bg-cyan-100 text-cyan-800',
-  KEBERATAN: 'bg-red-100 text-red-800',
-  DIBATALKAN: 'bg-gray-100 text-gray-800',
-  DIKIRIM: 'bg-blue-100 text-blue-800',
-  DISETUJUI: 'bg-cyan-100 text-cyan-800',
-  DALAM_REVIEW: 'bg-yellow-100 text-yellow-800',
-  SELESAI: 'bg-cyan-100 text-cyan-800',
-  BELUM_DIBAYAR: 'bg-orange-100 text-orange-800',
-  SUDAH_DITRANSFER: 'bg-cyan-100 text-cyan-800',
-  GAGAL_TRANSFER: 'bg-red-100 text-red-800',
+  ACTIVE: BADGE_SUCCESS,
+  INACTIVE: BADGE_MUTED,
+  DRAFT: BADGE_MUTED,
+  AKTIF: BADGE_SUCCESS,
+  NONAKTIF: BADGE_MUTED,
+  KEDALUWARSA: BADGE_ORANGE,
+  ARSIP: BADGE_MUTED,
+  TERVERIFIKASI: BADGE_SUCCESS,
+  BELUM_DIVERIFIKASI: BADGE_WARNING,
+  MENUNGGU_VERIFIKASI: BADGE_INFO,
+  DITOLAK: BADGE_DANGER,
+  DITERIMA_KOPERASI: BADGE_INFO,
+  MENUNGGU_QC: BADGE_WARNING,
+  QC_DIPROSES: BADGE_INFO,
+  QC_SELESAI: BADGE_SUCCESS,
+  HARGA_DIHITUNG: BADGE_SUCCESS,
+  MENUNGGU_PEMBAYARAN: BADGE_ORANGE,
+  DIBAYAR: BADGE_SUCCESS,
+  KEBERATAN: BADGE_DANGER,
+  DIBATALKAN: BADGE_MUTED,
+  DIKIRIM: BADGE_INFO,
+  DISETUJUI: BADGE_SUCCESS,
+  DIKOREKSI: BADGE_ORANGE,
+  DALAM_REVIEW: BADGE_WARNING,
+  PERLU_QC_ULANG: BADGE_ORANGE,
+  SELESAI: BADGE_SUCCESS,
+  BELUM_DIBAYAR: BADGE_ORANGE,
+  MENUNGGU_TRANSFER: BADGE_WARNING,
+  SUDAH_DITRANSFER: BADGE_SUCCESS,
+  GAGAL_TRANSFER: BADGE_DANGER,
 }
 
 export const SELLER_TYPE_LABELS: Record<string, string> = {

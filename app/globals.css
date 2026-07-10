@@ -1,3 +1,12 @@
+/* -----------------------------------------------------------------------
+ * Karya Taniku · globals.css
+ *
+ * Tailwind v4 + shadcn base-nova, retuned to the Karya Taniku palette.
+ * Light + dark, sidebar + chart included.
+ *
+ * Source of truth: karya_taniku/docs/design-tokens.md
+ * ----------------------------------------------------------------------- */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -10,111 +19,174 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Karya Taniku extras */
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-warning: var(--warning);
+  --color-orange: var(--orange);
+  --color-info: var(--info);
+
+  --color-grade-a: var(--grade-a);
+  --color-grade-b: var(--grade-b);
+  --color-grade-c: var(--grade-c);
+  --color-grade-reject: var(--grade-reject);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 20px;
 }
 
+/* -----------------------------------------------------------------------
+ * Light theme — Karya Taniku canvas
+ * ----------------------------------------------------------------------- */
 :root {
-  --background: #f0f4f8;
-  --foreground: #1a2332;
-  --card: #ffffff;
-  --card-foreground: #1a2332;
-  --popover: #ffffff;
-  --popover-foreground: #1a2332;
-  --primary: #065366;
-  --primary-foreground: #ffffff;
-  --secondary: #e8edf2;
-  --secondary-foreground: #1a3a4a;
-  --muted: #edf1f5;
-  --muted-foreground: #5a6b7d;
-  --accent: #0a7a96;
-  --accent-foreground: #ffffff;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #dde3ea;
-  --input: #dde3ea;
-  --ring: #065366;
-  --chart-1: #065366;
-  --chart-2: #e4a80e;
-  --chart-3: #a0ba3b;
-  --chart-4: #e07030;
-  --chart-5: #7c5bbf;
-  --radius: 0.625rem;
-  --sidebar: #0d2d3d;
-  --sidebar-foreground: #c8dce6;
-  --sidebar-primary: #e4a80e;
-  --sidebar-primary-foreground: #1a2332;
-  --sidebar-accent: #0e3a4e;
-  --sidebar-accent-foreground: #e8f0f4;
-  --sidebar-border: #1a4a5e;
-  --sidebar-ring: #e4a80e;
+  /* Ground & text */
+  --background: #F8F5EC;
+  --foreground: #1F2933;
+  --card: #FFFFFF;
+  --card-foreground: #1F2933;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2933;
+
+  /* Brand */
+  --primary: #1F6B3A;
+  --primary-foreground: #FFFFFF;
+  --brand: #1F6B3A;
+  --brand-dark: #0F3D25;
+  --brand-light: #E8F5EC;
+
+  /* Support */
+  --secondary: #F3EFE3;
+  --secondary-foreground: #1F2933;
+  --muted: #F3EFE3;
+  --muted-foreground: #6B7280;
+  --accent: #E8F5EC;
+  --accent-foreground: #0F3D25;
+
+  /* Semantics */
+  --destructive: #D64545;
+  --warning: #F4B942;
+  --orange: #E89B3D;
+  --info: #1C6EA4;
+
+  /* Grade */
+  --grade-a: #1F6B3A;
+  --grade-b: #6EA84A;
+  --grade-c: #E89B3D;
+  --grade-reject: #D64545;
+
+  /* Structural */
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #1F6B3A;
+  --radius: 0.875rem; /* 14px — matches button/input radius */
+
+  /* Chart — grade tokens plus info as a cool contrast for time series */
+  --chart-1: #1F6B3A;
+  --chart-2: #6EA84A;
+  --chart-3: #E89B3D;
+  --chart-4: #1C6EA4;
+  --chart-5: #D64545;
+
+  /* Sidebar — deep-green koperasi shell with warm amber accent */
+  --sidebar: #0F3D25;
+  --sidebar-foreground: #E1EFE6;
+  --sidebar-primary: #F4B942;
+  --sidebar-primary-foreground: #0F3D25;
+  --sidebar-accent: #173F28;
+  --sidebar-accent-foreground: #E8F5EC;
+  --sidebar-border: #1E5A38;
+  --sidebar-ring: #F4B942;
 }
 
+/* -----------------------------------------------------------------------
+ * Dark theme — lifted greens on deep forest ground.
+ * ----------------------------------------------------------------------- */
 .dark {
-  --background: #0d1b24;
-  --foreground: #e8f0f4;
-  --card: #132a38;
-  --card-foreground: #e8f0f4;
-  --popover: #132a38;
-  --popover-foreground: #e8f0f4;
-  --primary: #2faac8;
-  --primary-foreground: #0d1b24;
-  --secondary: #1a3a4a;
-  --secondary-foreground: #e8f0f4;
-  --muted: #1a3a4a;
-  --muted-foreground: #7a9aac;
-  --accent: #1a3a4a;
-  --accent-foreground: #e8f0f4;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #2faac8;
-  --chart-1: #2faac8;
-  --chart-2: #e4a80e;
-  --chart-3: #a0ba3b;
-  --chart-4: #e07030;
-  --chart-5: #9c7bdf;
-  --sidebar: #091e2a;
-  --sidebar-foreground: #e8f0f4;
-  --sidebar-primary: #e4a80e;
-  --sidebar-primary-foreground: #0d1b24;
-  --sidebar-accent: #132a38;
-  --sidebar-accent-foreground: #e8f0f4;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #e4a80e;
+  --background: #0E1A14;
+  --foreground: #E7EBE1;
+  --card: #17251E;
+  --card-foreground: #E7EBE1;
+  --popover: #17251E;
+  --popover-foreground: #E7EBE1;
+
+  --primary: #4FAB6B;
+  --primary-foreground: #0E1A14;
+  --brand: #4FAB6B;
+  --brand-dark: #2E7A47;
+  --brand-light: #1E3527;
+
+  --secondary: #1D2E24;
+  --secondary-foreground: #E7EBE1;
+  --muted: #1D2E24;
+  --muted-foreground: #9BA79E;
+  --accent: #1E3527;
+  --accent-foreground: #E7EBE1;
+
+  --destructive: #E56B6B;
+  --warning: #F4B942;
+  --orange: #E89B3D;
+  --info: #4A9DCC;
+
+  --grade-a: #4FAB6B;
+  --grade-b: #8FC670;
+  --grade-c: #E89B3D;
+  --grade-reject: #E56B6B;
+
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #4FAB6B;
+
+  --chart-1: #4FAB6B;
+  --chart-2: #8FC670;
+  --chart-3: #E89B3D;
+  --chart-4: #4A9DCC;
+  --chart-5: #E56B6B;
+
+  --sidebar: #091E13;
+  --sidebar-foreground: #E1EFE6;
+  --sidebar-primary: #F4B942;
+  --sidebar-primary-foreground: #0F3D25;
+  --sidebar-accent: #152D1E;
+  --sidebar-accent-foreground: #E1EFE6;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: #F4B942;
 }
 
 @layer base {
@@ -122,7 +194,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
   html {
     @apply font-sans;

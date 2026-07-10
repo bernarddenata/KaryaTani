@@ -29,7 +29,7 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
     .toUpperCase()
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#dde3ea] bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-4">
       {/* Kiri: tombol menu mobile */}
       <div className="flex items-center gap-3">
         <Button
@@ -38,7 +38,7 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
           className="lg:hidden"
           onClick={onMobileMenuToggle}
         >
-          <Menu className="size-5 text-[#5a6b7d]" />
+          <Menu className="size-5 text-muted-foreground" />
           <span className="sr-only">Buka menu</span>
         </Button>
       </div>
@@ -47,14 +47,14 @@ export function Header({ user, onMobileMenuToggle }: HeaderProps) {
       <div className="flex items-center">
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-[#edf1f5] focus:outline-none"
+            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus:outline-none"
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-[#065366] text-xs font-semibold text-white">
+              <AvatarFallback className="bg-primary text-xs font-semibold text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <span className="hidden text-sm font-medium text-[#1a2332] sm:inline-block">
+            <span className="hidden text-sm font-medium text-foreground sm:inline-block">
               {user.name}
             </span>
           </DropdownMenuTrigger>

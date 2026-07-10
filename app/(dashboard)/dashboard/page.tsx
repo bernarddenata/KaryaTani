@@ -127,15 +127,15 @@ export default function DashboardPage() {
       label: 'Penjualan Hari Ini',
       value: String(salesToday.summary?.total_count ?? 0),
       icon: ShoppingCart,
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-[#065366]',
+      bgColor: 'bg-brand-light',
+      textColor: 'text-primary',
     },
     {
       label: 'Total Berat Diterima',
       value: formatWeight(salesToday.summary?.total_weight ?? 0),
       icon: Scale,
-      bgColor: 'bg-teal-50',
-      textColor: 'text-teal-700',
+      bgColor: 'bg-brand-light',
+      textColor: 'text-primary',
     },
     {
       label: 'Menunggu QC',
@@ -148,8 +148,8 @@ export default function DashboardPage() {
       label: 'QC Selesai',
       value: String(qcReport.summary?.total_count ?? 0),
       icon: CheckCircle,
-      bgColor: 'bg-sky-50',
-      textColor: 'text-sky-600',
+      bgColor: 'bg-info/10',
+      textColor: 'text-info',
     },
     {
       label: 'Keberatan Aktif',
@@ -176,8 +176,8 @@ export default function DashboardPage() {
       label: 'Total Nilai Hari Ini',
       value: formatRupiah(salesToday.summary?.total_amount ?? 0),
       icon: Banknote,
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-[#065366]',
+      bgColor: 'bg-brand-light',
+      textColor: 'text-primary',
     },
   ]
 
@@ -192,7 +192,7 @@ export default function DashboardPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#065366] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="text-sm text-gray-500">Memuat data dasbor...</p>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="weight" fill="#065366" name="Berat (kg)" />
+                        <Bar dataKey="weight" fill="#1F6B3A" name="Berat (kg)" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

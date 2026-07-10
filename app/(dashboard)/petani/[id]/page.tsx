@@ -220,7 +220,7 @@ export default function PetaniDetailPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       ) : !farmer ? (
         <Card>
@@ -316,7 +316,7 @@ export default function PetaniDetailPage() {
                         <div className="space-y-2">
                           <div>
                             <p className="text-xs text-gray-500">Saldo Tersedia</p>
-                            <p className="text-lg font-semibold text-[#065366]">{formatRupiah(wallet.available_balance)}</p>
+                            <p className="text-lg font-semibold text-primary">{formatRupiah(wallet.available_balance)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500">Saldo Ditahan</p>

@@ -21,10 +21,10 @@ function DashboardShell({ children }: { children: ReactNode }) {
   // Tampilkan loading saat memeriksa autentikasi
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f0f4f8]">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="size-8 animate-spin text-[#065366]" />
-          <p className="text-sm text-[#5a6b7d]">Memuat...</p>
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Memuat...</p>
         </div>
       </div>
     )
@@ -34,10 +34,10 @@ function DashboardShell({ children }: { children: ReactNode }) {
   if (!user) {
     router.push("/auth/login")
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f0f4f8]">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="size-8 animate-spin text-[#065366]" />
-          <p className="text-sm text-[#5a6b7d]">Mengalihkan ke halaman masuk...</p>
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Mengalihkan ke halaman masuk...</p>
         </div>
       </div>
     )
@@ -79,7 +79,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
           user={headerUser}
           onMobileMenuToggle={() => setMobileOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto bg-[#f0f4f8] p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
           {children}
         </main>
       </div>

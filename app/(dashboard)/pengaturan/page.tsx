@@ -98,7 +98,7 @@ export default function PengaturanPage() {
         permission="settings.view"
       >
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       </DashboardShell>
     )
@@ -137,7 +137,7 @@ export default function PengaturanPage() {
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-[#065366]" />
+              <Building2 className="h-5 w-5 text-primary" />
               <CardTitle className="text-base">Informasi Koperasi</CardTitle>
             </div>
           </CardHeader>
@@ -168,7 +168,7 @@ export default function PengaturanPage() {
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-blue-600" />
+              <Server className="h-5 w-5 text-info" />
               <CardTitle className="text-base">Informasi Sistem</CardTitle>
             </div>
           </CardHeader>
@@ -179,7 +179,7 @@ export default function PengaturanPage() {
                 <span className="text-sm text-muted-foreground">Database</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">PostgreSQL</span>
-                  <Badge className="bg-cyan-100 text-cyan-800">Terhubung</Badge>
+                  <Badge className="bg-primary/15 text-primary">Terhubung</Badge>
                 </div>
               </div>
               <InfoRow label="Server" value="Next.js" />
@@ -195,7 +195,7 @@ export default function PengaturanPage() {
       <Card className="mt-6">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#065366]" />
+            <Users className="h-5 w-5 text-primary" />
             <CardTitle className="text-base">Pegawai / User Koperasi</CardTitle>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -237,7 +237,7 @@ export default function PengaturanPage() {
                       <td className="py-2">{ASSIGNMENT_LABELS[a.assignment_type] || a.assignment_type}</td>
                       <td className="py-2">
                         {a.is_primary ? (
-                          <Badge className="bg-amber-100 text-amber-800">Utama</Badge>
+                          <Badge className="bg-warning/20 text-[#8A6414]">Utama</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -246,7 +246,7 @@ export default function PengaturanPage() {
                         <Badge
                           className={
                             a.status === 'AKTIF'
-                              ? 'bg-cyan-100 text-cyan-800'
+                              ? 'bg-primary/15 text-primary'
                               : 'bg-gray-100 text-gray-800'
                           }
                         >

@@ -156,7 +156,7 @@ export default function RiwayatSaldoPage() {
       key: 'amount_in',
       label: 'Masuk',
       render: (item) => (
-        <span className="text-[#065366]">{formatRupiah(item.amount_in)}</span>
+        <span className="text-primary">{formatRupiah(item.amount_in)}</span>
       ),
     },
     {

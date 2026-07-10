@@ -207,18 +207,18 @@ function SidebarContent({ user }: { user: SidebarUser }) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500 text-white">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <Sprout className="size-5" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-white">
+          <span className="text-sm font-bold text-white">
             Karya Tani Center
           </span>
-          <span className="text-xs text-cyan-300/70">Koperasi Pertanian</span>
+          <span className="text-xs text-sidebar-foreground/70">Koperasi Pertanian</span>
         </div>
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator className="bg-sidebar-border" />
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
@@ -230,7 +230,7 @@ function SidebarContent({ user }: { user: SidebarUser }) {
 
           return (
             <div key={group.label} className="mb-4">
-              <span className="mb-1.5 block px-2 text-[0.65rem] font-semibold uppercase tracking-wider text-cyan-400/50">
+              <span className="mb-1.5 block px-2 text-[0.65rem] font-bold uppercase tracking-[0.09em] text-sidebar-foreground/50">
                 {group.label}
               </span>
               <ul className="space-y-0.5">
@@ -246,16 +246,16 @@ function SidebarContent({ user }: { user: SidebarUser }) {
                       <Link
                         href={item.href}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-white/10 text-amber-400"
-                            : "text-cyan-200/80 hover:bg-white/5 hover:text-white"
+                            ? "bg-sidebar-accent text-sidebar-primary"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-white"
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0",
-                            isActive ? "text-amber-400" : "text-cyan-400/50"
+                            isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50"
                           )}
                         />
                         {item.label}
@@ -270,10 +270,10 @@ function SidebarContent({ user }: { user: SidebarUser }) {
       </nav>
 
       {/* Footer */}
-      <Separator className="bg-white/10" />
+      <Separator className="bg-sidebar-border" />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-full bg-cyan-800 text-xs font-semibold text-cyan-100">
+          <div className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-accent-foreground">
             {user.name
               .split(" ")
               .map((n) => n[0])
@@ -282,10 +282,10 @@ function SidebarContent({ user }: { user: SidebarUser }) {
               .toUpperCase()}
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-medium text-cyan-100">
+            <span className="truncate text-sm font-medium text-sidebar-foreground">
               {user.name}
             </span>
-            <span className="truncate text-xs text-cyan-400/50">
+            <span className="truncate text-xs text-sidebar-foreground/50">
               {user.email}
             </span>
           </div>
@@ -297,7 +297,7 @@ function SidebarContent({ user }: { user: SidebarUser }) {
 
 export function Sidebar({ user }: { user: SidebarUser }) {
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-white/10 lg:bg-[#0d2d3d]">
+    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar">
       <SidebarContent user={user} />
     </aside>
   )
@@ -305,7 +305,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
 export function MobileSidebar({ user }: { user: SidebarUser }) {
   return (
-    <div className="flex h-full flex-col bg-[#0d2d3d]">
+    <div className="flex h-full flex-col bg-sidebar">
       <SidebarContent user={user} />
     </div>
   )

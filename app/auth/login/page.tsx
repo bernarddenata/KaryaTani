@@ -41,21 +41,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#065366] px-4 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0d2d3d] via-[#065366] to-[#0a7a96]" />
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_rgba(228,168,14,0.3)_0%,_transparent_60%)]" />
+    <div className="relative min-h-screen flex items-center justify-center bg-brand-dark px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0F3D25] via-[#1F6B3A] to-[#2E7A47]" />
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,185,66,0.35)_0%,_transparent_60%)]" />
 
       <Card className="relative z-10 w-full max-w-md border-0 shadow-2xl">
         <CardHeader className="text-center space-y-3 pb-2">
           <div className="flex justify-center">
-            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#065366] to-[#0a7a96] text-white shadow-lg">
+            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#1F6B3A] to-[#2E7A47] text-white shadow-lg">
               <Sprout className="h-9 w-9" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-[#0d2d3d]">
+          <CardTitle className="text-2xl font-bold text-brand-dark">
             Karya Tani Center
           </CardTitle>
-          <CardDescription className="text-[#5a6b7d]">
+          <CardDescription className="text-muted-foreground">
             Platform Pencatatan Hasil Tani untuk Koperasi
           </CardDescription>
         </CardHeader>
@@ -92,7 +92,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#065366] hover:bg-[#054558] text-white"
+              className="w-full bg-primary hover:bg-brand-dark text-white"
               disabled={loading}
             >
               {loading ? (
@@ -105,7 +105,7 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-          <p className="mt-4 text-center text-xs text-[#5a6b7d]">
+          <p className="mt-4 text-center text-xs text-muted-foreground">
             Koperasi Desa/Kelurahan Merah Putih
           </p>
         </CardContent>

@@ -146,7 +146,7 @@ export default function BatchPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       )}
 
@@ -154,7 +154,7 @@ export default function BatchPage() {
       {searched && !loading && !batchData && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+            <AlertTriangle className="h-12 w-12 text-orange mb-4" />
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Batch tidak ditemukan</h3>
             <p className="text-gray-500">
               Nomor batch &ldquo;{batchNumber}&rdquo; tidak ditemukan dalam sistem. Periksa kembali nomor batch Anda.
@@ -378,7 +378,7 @@ export default function BatchPage() {
                 {batchData.price_calculation.total_price && (
                   <div className="flex justify-between items-center pt-2 border-t">
                     <p className="font-medium">Total Harga</p>
-                    <p className="text-lg font-bold text-[#065366]">
+                    <p className="text-lg font-bold text-primary">
                       {formatRupiah(batchData.price_calculation.total_price)}
                     </p>
                   </div>
@@ -403,11 +403,11 @@ export default function BatchPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Masuk</p>
-                    <p className="font-medium text-[#065366]">{formatRupiah(batchData.wallet_mutation.amount_in)}</p>
+                    <p className="font-medium text-primary">{formatRupiah(batchData.wallet_mutation.amount_in)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Keluar</p>
-                    <p className="font-medium text-red-700">{formatRupiah(batchData.wallet_mutation.amount_out)}</p>
+                    <p className="font-medium text-destructive">{formatRupiah(batchData.wallet_mutation.amount_out)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Saldo Setelah</p>
@@ -432,7 +432,7 @@ export default function BatchPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Jumlah</p>
-                    <p className="font-medium text-[#065366]">{formatRupiah(batchData.payout.amount)}</p>
+                    <p className="font-medium text-primary">{formatRupiah(batchData.payout.amount)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Metode</p>
@@ -459,9 +459,9 @@ export default function BatchPage() {
 
           {/* Dispute Info */}
           {batchData.dispute && (
-            <Card className="border-orange-200">
+            <Card className="border-orange/30">
               <CardHeader>
-                <CardTitle className="text-orange-700">Keberatan</CardTitle>
+                <CardTitle className="text-orange">Keberatan</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

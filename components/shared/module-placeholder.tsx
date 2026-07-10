@@ -19,7 +19,7 @@ export function ModulePlaceholder({
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-16">
       <div className="flex flex-col items-center gap-6 text-center">
         {/* Ikon besar */}
-        <div className="flex size-20 items-center justify-center rounded-2xl bg-cyan-100 text-[#065366] [&_svg]:size-10">
+        <div className="flex size-20 items-center justify-center rounded-2xl bg-primary/15 text-primary [&_svg]:size-10">
           {icon}
         </div>
 
@@ -30,14 +30,14 @@ export function ModulePlaceholder({
         </div>
 
         {/* Kartu status */}
-        <div className="w-full max-w-sm rounded-xl border border-cyan-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-[#065366]">
+        <div className="w-full max-w-sm rounded-xl border border-primary/20 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-primary">
             Fondasi modul sudah siap dikembangkan.
           </p>
         </div>
 
         {/* Badge info */}
-        <Badge variant="secondary" className="gap-1.5 bg-amber-50 text-amber-700">
+        <Badge variant="secondary" className="gap-1.5 bg-warning/20 text-[#8A6414]">
           <Info className="size-3" />
           Data ini masih contoh untuk fondasi awal.
         </Badge>

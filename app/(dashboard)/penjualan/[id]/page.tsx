@@ -203,7 +203,7 @@ export default function PenjualanDetailPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       ) : !sale ? (
         <Card>
@@ -343,7 +343,7 @@ export default function PenjualanDetailPage() {
                 {sale.total_amount && (
                   <div>
                     <p className="text-sm text-gray-500">Total</p>
-                    <p className="font-semibold text-[#065366]">{formatRupiah(sale.total_amount)}</p>
+                    <p className="font-semibold text-primary">{formatRupiah(sale.total_amount)}</p>
                   </div>
                 )}
               </div>
@@ -422,7 +422,7 @@ export default function PenjualanDetailPage() {
                   <div>
                     <p className="text-sm text-gray-500">Grade Final</p>
                     {qcResult.final_grade_code ? (
-                      <Badge className="bg-cyan-100 text-cyan-800">{qcResult.final_grade_code}</Badge>
+                      <Badge className="bg-primary/15 text-primary">{qcResult.final_grade_code}</Badge>
                     ) : (
                       <p className="font-medium">-</p>
                     )}
@@ -585,7 +585,7 @@ export default function PenjualanDetailPage() {
               <div className="flex flex-wrap gap-3 items-center">
                 {sale.status === 'MENUNGGU_QC' && (
                   <Link href={`/hasil-qc/${sale.id}`}>
-                    <Button className="bg-[#065366] hover:bg-[#054558] text-white">
+                    <Button className="bg-primary hover:bg-brand-dark text-white">
                       Mulai QC
                     </Button>
                   </Link>
@@ -599,7 +599,7 @@ export default function PenjualanDetailPage() {
                 )}
                 {sale.status === 'QC_SELESAI' && (
                   <Button
-                    className="bg-[#065366] hover:bg-[#054558] text-white"
+                    className="bg-primary hover:bg-brand-dark text-white"
                     onClick={handleCalculatePrice}
                     disabled={actionLoading}
                   >
@@ -610,10 +610,10 @@ export default function PenjualanDetailPage() {
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Total yang harus dibayar</p>
-                      <p className="text-xl font-bold text-[#065366]">{formatRupiah(sale.total_amount)}</p>
+                      <p className="text-xl font-bold text-primary">{formatRupiah(sale.total_amount)}</p>
                     </div>
                     <Link href="/bayar-petani">
-                      <Button className="bg-[#065366] hover:bg-[#054558] text-white">
+                      <Button className="bg-primary hover:bg-brand-dark text-white">
                         Bayar Petani
                       </Button>
                     </Link>

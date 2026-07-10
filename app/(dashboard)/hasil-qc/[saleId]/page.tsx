@@ -337,7 +337,7 @@ export default function HasilQcFormPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       ) : !sale ? (
         <Card>
@@ -401,7 +401,7 @@ export default function HasilQcFormPage() {
                     untuk memulai proses QC.
                   </p>
                   <Button
-                    className="bg-[#065366] hover:bg-[#054558] text-white"
+                    className="bg-primary hover:bg-brand-dark text-white"
                     onClick={handleStartQc}
                     disabled={starting}
                   >
@@ -748,7 +748,7 @@ export default function HasilQcFormPage() {
 
                   <div className="flex gap-3">
                     <Button
-                      className="bg-[#065366] hover:bg-[#054558] text-white"
+                      className="bg-primary hover:bg-brand-dark text-white"
                       onClick={handleSubmit}
                       disabled={submitting || !finalGrade}
                     >

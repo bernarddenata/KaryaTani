@@ -154,12 +154,12 @@ export function UserCooperativesManager({ userId }: { userId: string }) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{a.cooperative.name}</span>
                     {a.is_primary && (
-                      <Badge className="bg-amber-100 text-amber-800">Utama</Badge>
+                      <Badge className="bg-warning/20 text-[#8A6414]">Utama</Badge>
                     )}
                     <Badge
                       className={
                         a.status === 'AKTIF'
-                          ? 'bg-cyan-100 text-cyan-800'
+                          ? 'bg-primary/15 text-primary'
                           : 'bg-gray-100 text-gray-800'
                       }
                     >

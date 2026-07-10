@@ -60,14 +60,14 @@ export default function SaldoPetaniPage() {
       key: 'available_balance',
       label: 'Saldo Tersedia',
       render: (item) => (
-        <span className="font-medium text-[#065366]">{formatRupiah(item.available_balance)}</span>
+        <span className="font-medium text-primary">{formatRupiah(item.available_balance)}</span>
       ),
     },
     {
       key: 'held_balance',
       label: 'Saldo Ditahan',
       render: (item) => (
-        <span className="text-orange-600">{formatRupiah(item.held_balance)}</span>
+        <span className="text-orange">{formatRupiah(item.held_balance)}</span>
       ),
     },
     {

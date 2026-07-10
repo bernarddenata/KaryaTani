@@ -263,13 +263,13 @@ export default function BayarPetaniPage() {
             </div>
 
             {formData.farmer_id && (
-              <Card className="border-cyan-100">
+              <Card className="border-primary/20">
                 <CardContent className="pt-4 pb-3">
                   <p className="text-sm text-muted-foreground">Saldo Tersedia</p>
                   {walletLoading ? (
                     <p className="text-lg font-semibold text-muted-foreground">Memuat...</p>
                   ) : wallet ? (
-                    <p className="text-lg font-semibold text-[#065366]">
+                    <p className="text-lg font-semibold text-primary">
                       {formatRupiah(wallet.available_balance)}
                     </p>
                   ) : (
