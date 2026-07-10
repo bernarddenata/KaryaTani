@@ -3,6 +3,7 @@
   "configurations": [
     {
       "name": "karya-tani-dev",
+      "cwd": ".",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000

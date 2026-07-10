@@ -46,7 +46,7 @@ export default function PengaturanPage() {
         permission="settings.view"
       >
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       </DashboardShell>
     )
@@ -63,7 +63,7 @@ export default function PengaturanPage() {
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-green-600" />
+              <Building2 className="h-5 w-5 text-[#065366]" />
               <CardTitle className="text-base">Informasi Koperasi</CardTitle>
             </div>
           </CardHeader>
@@ -106,7 +106,7 @@ export default function PengaturanPage() {
                 <span className="text-sm text-muted-foreground">Database</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">PostgreSQL</span>
-                  <Badge className="bg-green-100 text-green-800">Terhubung</Badge>
+                  <Badge className="bg-cyan-100 text-cyan-800">Terhubung</Badge>
                 </div>
               </div>
               <InfoRow label="Server" value="Next.js" />

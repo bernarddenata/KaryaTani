@@ -13,7 +13,7 @@ interface EndpointGroup {
 }
 
 const METHOD_COLORS: Record<string, string> = {
-  GET: 'bg-green-100 text-green-800',
+  GET: 'bg-cyan-100 text-cyan-800',
   POST: 'bg-blue-100 text-blue-800',
   PATCH: 'bg-yellow-100 text-yellow-800',
   DELETE: 'bg-red-100 text-red-800',
@@ -229,7 +229,7 @@ export default function AksesAPIPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
+                <Activity className="h-5 w-5 text-[#065366]" />
                 <CardTitle className="text-base">Status API</CardTitle>
               </div>
               <CardDescription>
@@ -240,7 +240,7 @@ export default function AksesAPIPage() {
               {healthLoading ? (
                 <span className="text-sm text-muted-foreground">Memeriksa...</span>
               ) : healthOk ? (
-                <Badge className="bg-green-100 text-green-800">Aktif - Server Berjalan</Badge>
+                <Badge className="bg-cyan-100 text-cyan-800">Aktif - Server Berjalan</Badge>
               ) : (
                 <Badge className="bg-red-100 text-red-800">Tidak Tersedia</Badge>
               )}

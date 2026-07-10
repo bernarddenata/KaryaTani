@@ -150,7 +150,7 @@ export default function HakAksesPage() {
                           return (
                             <div key={perm.id} className="flex items-center gap-2 text-sm">
                               {granted ? (
-                                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                <Check className="h-4 w-4 text-[#065366] flex-shrink-0" />
                               ) : (
                                 <Minus className="h-4 w-4 text-gray-300 flex-shrink-0" />
                               )}

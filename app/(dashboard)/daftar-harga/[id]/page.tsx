@@ -212,7 +212,7 @@ export default function DaftarHargaDetailPage() {
     return (
       <DashboardShell title="Daftar Harga" description="Memuat..." permission="price_lists.view">
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       </DashboardShell>
     )

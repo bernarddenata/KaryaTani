@@ -91,7 +91,7 @@ export default function SaldoPetaniDetailPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       ) : !wallet ? (
         <Card>
@@ -115,10 +115,10 @@ export default function SaldoPetaniDetailPage() {
 
           {/* Stat Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-green-200">
+            <Card className="border-cyan-200">
               <CardContent className="pt-6">
                 <p className="text-sm text-gray-500">Saldo Tersedia</p>
-                <p className="text-2xl font-bold text-green-700">
+                <p className="text-2xl font-bold text-[#065366]">
                   {formatRupiah(wallet.available_balance)}
                 </p>
               </CardContent>
@@ -176,7 +176,7 @@ export default function SaldoPetaniDetailPage() {
                             <TableCell>
                               {MUTATION_TYPE_LABELS[m.mutation_type] || m.mutation_type}
                             </TableCell>
-                            <TableCell className="text-green-700">
+                            <TableCell className="text-[#065366]">
                               {formatRupiah(m.amount_in)}
                             </TableCell>
                             <TableCell className="text-red-700">

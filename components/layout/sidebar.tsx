@@ -207,18 +207,18 @@ function SidebarContent({ user }: { user: SidebarUser }) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-green-800 text-white">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500 text-white">
           <Sprout className="size-5" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-green-900">
+          <span className="text-sm font-semibold text-white">
             Karya Tani Center
           </span>
-          <span className="text-xs text-green-700/70">Koperasi Pertanian</span>
+          <span className="text-xs text-cyan-300/70">Koperasi Pertanian</span>
         </div>
       </div>
 
-      <Separator className="bg-green-200/60" />
+      <Separator className="bg-white/10" />
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
@@ -230,7 +230,7 @@ function SidebarContent({ user }: { user: SidebarUser }) {
 
           return (
             <div key={group.label} className="mb-4">
-              <span className="mb-1.5 block px-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">
+              <span className="mb-1.5 block px-2 text-[0.65rem] font-semibold uppercase tracking-wider text-cyan-400/50">
                 {group.label}
               </span>
               <ul className="space-y-0.5">
@@ -248,14 +248,14 @@ function SidebarContent({ user }: { user: SidebarUser }) {
                         className={cn(
                           "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-green-100 text-green-800"
-                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                            ? "bg-white/10 text-amber-400"
+                            : "text-cyan-200/80 hover:bg-white/5 hover:text-white"
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0",
-                            isActive ? "text-green-700" : "text-gray-400"
+                            isActive ? "text-amber-400" : "text-cyan-400/50"
                           )}
                         />
                         {item.label}
@@ -270,10 +270,10 @@ function SidebarContent({ user }: { user: SidebarUser }) {
       </nav>
 
       {/* Footer */}
-      <Separator className="bg-green-200/60" />
+      <Separator className="bg-white/10" />
       <div className="px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-800">
+          <div className="flex size-8 items-center justify-center rounded-full bg-cyan-800 text-xs font-semibold text-cyan-100">
             {user.name
               .split(" ")
               .map((n) => n[0])
@@ -282,10 +282,10 @@ function SidebarContent({ user }: { user: SidebarUser }) {
               .toUpperCase()}
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-medium text-gray-800">
+            <span className="truncate text-sm font-medium text-cyan-100">
               {user.name}
             </span>
-            <span className="truncate text-xs text-gray-400">
+            <span className="truncate text-xs text-cyan-400/50">
               {user.email}
             </span>
           </div>
@@ -297,7 +297,7 @@ function SidebarContent({ user }: { user: SidebarUser }) {
 
 export function Sidebar({ user }: { user: SidebarUser }) {
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-green-200/60 lg:bg-white">
+    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-white/10 lg:bg-[#0d2d3d]">
       <SidebarContent user={user} />
     </aside>
   )
@@ -305,7 +305,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
 export function MobileSidebar({ user }: { user: SidebarUser }) {
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-[#0d2d3d]">
       <SidebarContent user={user} />
     </div>
   )

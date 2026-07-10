@@ -41,18 +41,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-amber-50 to-green-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#065366] px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0d2d3d] via-[#065366] to-[#0a7a96]" />
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_rgba(228,168,14,0.3)_0%,_transparent_60%)]" />
+
+      <Card className="relative z-10 w-full max-w-md border-0 shadow-2xl">
+        <CardHeader className="text-center space-y-3 pb-2">
           <div className="flex justify-center">
-            <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-green-800 text-white">
-              <Sprout className="h-8 w-8" />
+            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#065366] to-[#0a7a96] text-white shadow-lg">
+              <Sprout className="h-9 w-9" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-green-900">
+          <CardTitle className="text-2xl font-bold text-[#0d2d3d]">
             Karya Tani Center
           </CardTitle>
-          <CardDescription className="text-gray-500">
+          <CardDescription className="text-[#5a6b7d]">
             Platform Pencatatan Hasil Tani untuk Koperasi
           </CardDescription>
         </CardHeader>
@@ -89,7 +92,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-green-700 hover:bg-green-800 text-white"
+              className="w-full bg-[#065366] hover:bg-[#054558] text-white"
               disabled={loading}
             >
               {loading ? (
@@ -102,6 +105,9 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          <p className="mt-4 text-center text-xs text-[#5a6b7d]">
+            Koperasi Desa/Kelurahan Merah Putih
+          </p>
         </CardContent>
       </Card>
     </div>

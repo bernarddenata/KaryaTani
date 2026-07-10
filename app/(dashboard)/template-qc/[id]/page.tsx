@@ -192,7 +192,7 @@ export default function TemplateQCDetailPage() {
       key: 'is_required',
       label: 'Wajib?',
       render: (item) => item.is_required ? (
-        <Badge className="bg-green-100 text-green-800">Ya</Badge>
+        <Badge className="bg-cyan-100 text-cyan-800">Ya</Badge>
       ) : (
         <span className="text-muted-foreground">Tidak</span>
       ),
@@ -221,7 +221,7 @@ export default function TemplateQCDetailPage() {
     return (
       <DashboardShell title="Template QC" description="Memuat..." permission="qc_templates.view">
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       </DashboardShell>
     )

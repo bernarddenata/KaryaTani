@@ -46,7 +46,7 @@ const ENTITY_TYPES = [
 const SOURCE_CLIENTS = ['WEB', 'MOBILE_QC', 'MOBILE_FARMER', 'API', 'SYSTEM']
 
 const ACTION_COLORS: Record<string, string> = {
-  CREATE: 'bg-green-100 text-green-800',
+  CREATE: 'bg-cyan-100 text-cyan-800',
   UPDATE: 'bg-blue-100 text-blue-800',
   DELETE: 'bg-red-100 text-red-800',
   REVIEW: 'bg-yellow-100 text-yellow-800',

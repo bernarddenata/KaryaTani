@@ -159,7 +159,7 @@ export default function KeberatanDetailPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       ) : !dispute ? (
         <Card>
@@ -274,7 +274,7 @@ export default function KeberatanDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-500">Grade Final</p>
-                  <Badge className="bg-green-100 text-green-800">
+                  <Badge className="bg-cyan-100 text-cyan-800">
                     {dispute.qc_result.final_grade_code}
                   </Badge>
                 </div>

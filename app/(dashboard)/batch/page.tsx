@@ -146,7 +146,7 @@ export default function BatchPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#065366]" />
         </div>
       )}
 
@@ -378,7 +378,7 @@ export default function BatchPage() {
                 {batchData.price_calculation.total_price && (
                   <div className="flex justify-between items-center pt-2 border-t">
                     <p className="font-medium">Total Harga</p>
-                    <p className="text-lg font-bold text-green-700">
+                    <p className="text-lg font-bold text-[#065366]">
                       {formatRupiah(batchData.price_calculation.total_price)}
                     </p>
                   </div>
@@ -403,7 +403,7 @@ export default function BatchPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Masuk</p>
-                    <p className="font-medium text-green-700">{formatRupiah(batchData.wallet_mutation.amount_in)}</p>
+                    <p className="font-medium text-[#065366]">{formatRupiah(batchData.wallet_mutation.amount_in)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Keluar</p>
@@ -432,7 +432,7 @@ export default function BatchPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Jumlah</p>
-                    <p className="font-medium text-green-700">{formatRupiah(batchData.payout.amount)}</p>
+                    <p className="font-medium text-[#065366]">{formatRupiah(batchData.payout.amount)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Metode</p>

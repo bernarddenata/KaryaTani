@@ -53,7 +53,7 @@ const GRADE_OPTIONS = [
 ]
 
 const GRADE_COLORS: Record<string, string> = {
-  A: 'bg-green-100 text-green-800',
+  A: 'bg-cyan-100 text-cyan-800',
   B: 'bg-blue-100 text-blue-800',
   C: 'bg-yellow-100 text-yellow-800',
   REJECT: 'bg-red-100 text-red-800',
