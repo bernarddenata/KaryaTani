@@ -8,13 +8,14 @@ export async function GET() {
       title: 'Karya Tani Center API',
       version: '0.1.0',
       description:
-        'API untuk platform koperasi pertanian Karya Tani Center. Mengelola data koperasi, petani, komoditas, penjualan hasil tani, quality control, dompet petani, dan pembayaran.',
+        'API untuk platform koperasi pertanian Karya Tani Center. Mengelola data koperasi, petani, komoditas, penjualan hasil tani, quality control, dompet petani, dan pembayaran.\n\n**Multi-Koperasi Access Scope:** Semua endpoint operasional (petani, penjualan, QC, dompet, pembayaran, keberatan, batch, laporan) secara otomatis difilter berdasarkan pemetaan `user_cooperatives` pengguna yang login. SYSTEM_ADMIN memperoleh akses global. Pengguna dengan koperasi terbatas hanya melihat data dari koperasi yang ditugaskan. Percobaan akses ke koperasi di luar cakupan mengembalikan 403 (untuk operasi tulis) atau 404 aman (untuk pembacaan detail — untuk menghindari kebocoran eksistensi record).',
     },
     servers: [{ url: '/api', description: 'API Server' }],
     tags: [
       { name: 'Health', description: 'Status kesehatan aplikasi' },
       { name: 'Auth', description: 'Autentikasi dan otorisasi' },
       { name: 'Users', description: 'Manajemen pengguna' },
+      { name: 'User Cooperatives', description: 'Pemetaan pengguna ke koperasi (multi-koperasi access mapping). Menentukan koperasi mana yang dapat diakses oleh setiap pengguna.' },
       { name: 'Roles', description: 'Manajemen peran' },
       { name: 'Permissions', description: 'Manajemen hak akses' },
       { name: 'Cooperatives', description: 'Manajemen koperasi' },
@@ -248,7 +249,7 @@ export async function GET() {
         get: {
           tags: ['Auth'],
           summary: 'Profil pengguna saat ini',
-          description: 'Mengembalikan data pengguna yang sedang login beserta peran dan hak aksesnya.',
+          description: 'Mengembalikan data pengguna yang sedang login beserta peran dan hak aksesnya. Response juga menyertakan `accessible_cooperatives` dan `is_global_access` sebagai konteks pemetaan akses koperasi.',
           security: [{ bearerAuth: [] }],
           responses: {
             '200': {
@@ -283,6 +284,25 @@ export async function GET() {
                                 type: 'array',
                                 items: { type: 'string' },
                                 example: ['dashboard.view', 'farmers.view', 'farmers.create'],
+                              },
+                              accessible_cooperatives: {
+                                type: 'array',
+                                items: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    code: { type: 'string' },
+                                    name: { type: 'string' },
+                                    status: { type: 'string' },
+                                    assignment_type: { type: 'string', enum: ['PEGAWAI', 'ADMIN_KOPERASI', 'PETUGAS_QC', 'SUPERVISOR_QC', 'STAFF_KEUANGAN', 'MANAGER', 'VIEWER', 'SYSTEM_ADMIN'] },
+                                    is_primary: { type: 'boolean' },
+                                  },
+                                },
+                                description: 'Daftar koperasi yang dapat diakses oleh pengguna. Untuk SYSTEM_ADMIN berisi seluruh koperasi aktif.',
+                              },
+                              is_global_access: {
+                                type: 'boolean',
+                                description: 'true jika pengguna memiliki akses global (SYSTEM_ADMIN).',
                               },
                             },
                           },
@@ -371,6 +391,280 @@ export async function GET() {
                         type: 'object',
                         properties: {
                           data: { $ref: '#/components/schemas/User' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+
+      // ==================== User Cooperatives ====================
+      '/users/{id}/cooperatives': {
+        get: {
+          tags: ['User Cooperatives'],
+          summary: 'Daftar koperasi yang dapat diakses oleh pengguna',
+          description: 'Mengembalikan semua penugasan koperasi (user_cooperatives) untuk pengguna tertentu. Memerlukan permission `users.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID pengguna',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar penugasan koperasi milik pengguna',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                id: { type: 'string', format: 'uuid' },
+                                cooperative_id: { type: 'string', format: 'uuid' },
+                                assignment_type: { type: 'string', enum: ['PEGAWAI', 'ADMIN_KOPERASI', 'PETUGAS_QC', 'SUPERVISOR_QC', 'STAFF_KEUANGAN', 'MANAGER', 'VIEWER', 'SYSTEM_ADMIN'] },
+                                is_primary: { type: 'boolean' },
+                                status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+                                created_at: { type: 'string', format: 'date-time' },
+                                updated_at: { type: 'string', format: 'date-time' },
+                                cooperative: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    code: { type: 'string' },
+                                    name: { type: 'string' },
+                                    status: { type: 'string' },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        post: {
+          tags: ['User Cooperatives'],
+          summary: 'Tambahkan penugasan koperasi ke pengguna',
+          description: 'Menugaskan koperasi baru kepada pengguna. Memerlukan permission `users.edit` atau `users.update`. Jika `is_primary=true`, flag utama pada penugasan lain milik pengguna yang sama akan dinonaktifkan secara otomatis.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID pengguna',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['cooperative_id'],
+                  properties: {
+                    cooperative_id: { type: 'string', format: 'uuid' },
+                    assignment_type: { type: 'string', enum: ['PEGAWAI', 'ADMIN_KOPERASI', 'PETUGAS_QC', 'SUPERVISOR_QC', 'STAFF_KEUANGAN', 'MANAGER', 'VIEWER'], default: 'PEGAWAI' },
+                    is_primary: { type: 'boolean', default: false, description: 'Jika true, secara otomatis menonaktifkan flag utama pada penugasan lain milik pengguna yang sama.' },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'], default: 'AKTIF' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Penugasan berhasil dibuat',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              user_id: { type: 'string', format: 'uuid' },
+                              cooperative_id: { type: 'string', format: 'uuid' },
+                              assignment_type: { type: 'string' },
+                              is_primary: { type: 'boolean' },
+                              status: { type: 'string' },
+                              created_at: { type: 'string', format: 'date-time' },
+                              updated_at: { type: 'string', format: 'date-time' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Pengguna sudah dipetakan ke koperasi ini',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'CONFLICT', message: 'Pengguna sudah dipetakan ke koperasi ini.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid — misalnya koperasi tidak ditemukan',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'Koperasi tidak ditemukan.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/user-cooperatives/{id}': {
+        patch: {
+          tags: ['User Cooperatives'],
+          summary: 'Ubah penugasan koperasi pengguna',
+          description: 'Memperbarui atribut penugasan koperasi (assignment_type, is_primary, status). Memerlukan permission `users.edit` atau `users.update`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID penugasan (user_cooperative)',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    assignment_type: { type: 'string', enum: ['PEGAWAI', 'ADMIN_KOPERASI', 'PETUGAS_QC', 'SUPERVISOR_QC', 'STAFF_KEUANGAN', 'MANAGER', 'VIEWER'] },
+                    is_primary: { type: 'boolean' },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Penugasan berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              user_id: { type: 'string', format: 'uuid' },
+                              cooperative_id: { type: 'string', format: 'uuid' },
+                              assignment_type: { type: 'string' },
+                              is_primary: { type: 'boolean' },
+                              status: { type: 'string' },
+                              updated_at: { type: 'string', format: 'date-time' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          tags: ['User Cooperatives'],
+          summary: 'Hapus penugasan koperasi pengguna',
+          description: 'Menghapus mapping user_cooperative. Memerlukan permission `users.edit` atau `users.update`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID penugasan (user_cooperative)',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Penugasan berhasil dihapus',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              deleted: { type: 'boolean', example: true },
+                            },
+                          },
                         },
                       },
                     ],
@@ -644,6 +938,86 @@ export async function GET() {
                 },
               },
             },
+          },
+        },
+      },
+      '/cooperatives/{id}/users': {
+        get: {
+          tags: ['Cooperatives', 'User Cooperatives'],
+          summary: 'Daftar pengguna yang ditugaskan ke koperasi',
+          description: 'Mengembalikan semua pengguna yang memiliki penugasan ke koperasi tertentu. Memerlukan permission `cooperatives.view` dan pengguna harus memiliki akses ke koperasi tersebut.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID koperasi',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar pengguna yang terikat pada koperasi',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                assignment_id: { type: 'string', format: 'uuid' },
+                                assignment_type: { type: 'string', enum: ['PEGAWAI', 'ADMIN_KOPERASI', 'PETUGAS_QC', 'SUPERVISOR_QC', 'STAFF_KEUANGAN', 'MANAGER', 'VIEWER', 'SYSTEM_ADMIN'] },
+                                is_primary: { type: 'boolean' },
+                                status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+                                created_at: { type: 'string', format: 'date-time' },
+                                user: {
+                                  type: 'object',
+                                  properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    name: { type: 'string' },
+                                    email: { type: 'string', format: 'email' },
+                                    phone: { type: 'string' },
+                                    status: { type: 'string' },
+                                    roles: {
+                                      type: 'array',
+                                      items: {
+                                        type: 'object',
+                                        properties: {
+                                          id: { type: 'string', format: 'uuid' },
+                                          code: { type: 'string' },
+                                          name: { type: 'string' },
+                                        },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': {
+              description: 'Pengguna tidak memiliki akses ke koperasi ini',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            '404': { $ref: '#/components/responses/NotFound' },
           },
         },
       },
