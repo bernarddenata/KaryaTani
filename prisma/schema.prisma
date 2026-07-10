@@ -136,9 +136,9 @@ model Cooperative {
 }
 
 model Farmer {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   cooperative_id      String
-  farmer_number       String   @unique
+  farmer_number       String    @unique
   name                String
   phone               String
   nik                 String?
@@ -146,10 +146,12 @@ model Farmer {
   village             String?
   seller_type         String
   photo_url           String?
-  verification_status String   @default("BELUM_DIVERIFIKASI")
-  status              String   @default("ACTIVE")
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  pin_hash            String?
+  app_activated_at    DateTime?
+  verification_status String    @default("BELUM_DIVERIFIKASI")
+  status              String    @default("ACTIVE")
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
 
   // Relations
   cooperative      Cooperative            @relation(fields: [cooperative_id], references: [id])

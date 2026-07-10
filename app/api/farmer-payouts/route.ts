@@ -85,6 +85,21 @@ export async function POST(request: NextRequest) {
 
     const { farmer_id, cooperative_id, amount, payout_method, transfer_reference, proof_file_id } = parsed.data
 
+    const farmer = await prisma.farmer.findUnique({
+      where: { id: farmer_id },
+      select: { id: true, status: true, cooperative_id: true, verification_status: true, seller_type: true },
+    })
+
+    if (!farmer) return notFoundResponse('Data petani tidak ditemukan.')
+
+    if (farmer.status !== 'ACTIVE') {
+      return errorResponse('FARMER_INACTIVE', 'Petani tidak aktif. Pembayaran hanya dapat dilakukan ke petani yang aktif.')
+    }
+
+    if (farmer.cooperative_id !== cooperative_id) {
+      return errorResponse('FARMER_NOT_MEMBER', 'Petani bukan anggota koperasi ini. Pembayaran hanya dapat dilakukan ke anggota koperasi yang terdaftar.')
+    }
+
     const wallet = await prisma.farmerWallet.findFirst({
       where: { farmer_id, cooperative_id },
     })
