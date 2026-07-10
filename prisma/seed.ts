@@ -302,26 +302,170 @@ async function main() {
   }
   console.log(`✅ User-cooperative mappings seeded (${userCooperativeMap.length} users)`)
 
-  // 5. Commodities + Variants
+  // 5. Commodities + Variants — expanded across Hasil Tani, Hasil Kebun, Hasil Ternak
+  // Images use Wikimedia Commons Special:FilePath which redirects to the CDN.
+  const wm = (file: string) =>
+    `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=400`
+
   const commodityDefinitions = [
-    { code: 'CABAI', name: 'Cabai', category: 'Sayuran', default_unit: 'kg', variants: [
-      { code: 'CABAI-MK', name: 'Cabai Merah Keriting', unit: 'kg' },
-      { code: 'CABAI-RM', name: 'Cabai Rawit Merah', unit: 'kg' },
-    ]},
-    { code: 'BERAS', name: 'Beras', category: 'Padi-padian', default_unit: 'kg', variants: [
+    // ============= HASIL TANI (Tanaman Pangan & Hortikultura) =============
+    { code: 'BERAS', name: 'Beras', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Beras hasil giling dari padi kering.',
+      image_url: wm('Reisberg.jpg'), variants: [
       { code: 'BERAS-MED', name: 'Beras Medium', unit: 'kg' },
       { code: 'BERAS-PREM', name: 'Beras Premium', unit: 'kg' },
     ]},
-    { code: 'JAGUNG', name: 'Jagung', category: 'Padi-padian', default_unit: 'kg', variants: [
-      { code: 'JAGUNG-PPL', name: 'Jagung Pipil', unit: 'kg' },
+    { code: 'PADI', name: 'Padi', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Gabah kering panen (GKP) atau gabah kering giling (GKG).',
+      image_url: wm('Rice_p1160004.jpg'), variants: [
+      { code: 'PADI-GKP', name: 'Gabah Kering Panen', unit: 'kg' },
+      { code: 'PADI-GKG', name: 'Gabah Kering Giling', unit: 'kg' },
     ]},
-    { code: 'KOPI', name: 'Kopi', category: 'Perkebunan', default_unit: 'kg', variants: [
+    { code: 'JAGUNG', name: 'Jagung', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Jagung pipilan atau tongkol.',
+      image_url: wm('Corn_on_the_cob.jpg'), variants: [
+      { code: 'JAGUNG-PPL', name: 'Jagung Pipil', unit: 'kg' },
+      { code: 'JAGUNG-MDA', name: 'Jagung Manis', unit: 'kg' },
+    ]},
+    { code: 'KEDELAI', name: 'Kedelai', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Kedelai kering untuk bahan tempe, tahu, dan susu kedelai.',
+      image_url: wm('Soybean.USDA.jpg'), variants: [] },
+    { code: 'KACANG-TANAH', name: 'Kacang Tanah', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Kacang tanah dengan atau tanpa kulit.',
+      image_url: wm('Peanuts_(Rasbak).jpg'), variants: [] },
+    { code: 'CABAI', name: 'Cabai', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Cabai segar dari petani, berbagai varian.',
+      image_url: wm('Piri_piri_from_Mozambique.jpg'), variants: [
+      { code: 'CABAI-MK', name: 'Cabai Merah Keriting', unit: 'kg' },
+      { code: 'CABAI-RM', name: 'Cabai Rawit Merah', unit: 'kg' },
+      { code: 'CABAI-BSR', name: 'Cabai Merah Besar', unit: 'kg' },
+    ]},
+    { code: 'BAWANG-MERAH', name: 'Bawang Merah', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Umbi bawang merah kering.',
+      image_url: wm('Shallots.jpg'), variants: [] },
+    { code: 'BAWANG-PUTIH', name: 'Bawang Putih', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Umbi bawang putih.',
+      image_url: wm('Garlic.jpg'), variants: [] },
+    { code: 'TOMAT', name: 'Tomat', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Tomat segar hasil panen.',
+      image_url: wm('Bright_red_tomato_and_cross_section02.jpg'), variants: [] },
+    { code: 'KENTANG', name: 'Kentang', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Umbi kentang segar.',
+      image_url: wm('Patates.jpg'), variants: [] },
+    { code: 'UBI-KAYU', name: 'Ubi Kayu (Singkong)', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Umbi singkong segar.',
+      image_url: wm('Manihot_esculenta_dsc07325.jpg'), variants: [] },
+    { code: 'UBI-JALAR', name: 'Ubi Jalar', category: 'Hasil Tani', default_unit: 'kg',
+      description: 'Umbi ubi jalar segar, berbagai warna.',
+      image_url: wm('Ipomoea_batatas_006.JPG'), variants: [] },
+
+    // ============= HASIL KEBUN (Perkebunan) =============
+    { code: 'KOPI', name: 'Kopi', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Biji kopi hasil panen dari petani.',
+      image_url: wm('Roasted_coffee_beans.jpg'), variants: [
       { code: 'KOPI-ARA', name: 'Kopi Arabika', unit: 'kg' },
       { code: 'KOPI-ROB', name: 'Kopi Robusta', unit: 'kg' },
     ]},
-    { code: 'KAKAO', name: 'Kakao', category: 'Perkebunan', default_unit: 'kg', variants: [
+    { code: 'KAKAO', name: 'Kakao', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Biji kakao untuk industri cokelat.',
+      image_url: wm('Cocoa_Pods.JPG'), variants: [
       { code: 'KAKAO-FER', name: 'Kakao Fermentasi', unit: 'kg' },
+      { code: 'KAKAO-NFR', name: 'Kakao Non-Fermentasi', unit: 'kg' },
     ]},
+    { code: 'SAWIT', name: 'Kelapa Sawit', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Tandan Buah Segar (TBS) kelapa sawit.',
+      image_url: wm('Elaeis_guineensis1.jpg'), variants: [
+      { code: 'SAWIT-TBS', name: 'TBS Sawit', unit: 'kg' },
+    ]},
+    { code: 'KARET', name: 'Karet', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Lateks atau bokar karet.',
+      image_url: wm('Hevea_brasiliensis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-072.jpg'), variants: [
+      { code: 'KARET-BKR', name: 'Bokar', unit: 'kg' },
+      { code: 'KARET-LTX', name: 'Lateks Cair', unit: 'liter' },
+    ]},
+    { code: 'TEH', name: 'Teh', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Pucuk daun teh basah dari kebun.',
+      image_url: wm('Camellia_sinensis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-025.jpg'), variants: [] },
+    { code: 'KELAPA', name: 'Kelapa', category: 'Hasil Kebun', default_unit: 'butir',
+      description: 'Kelapa utuh atau kopra kering.',
+      image_url: wm('Coconut_and_oil.jpg'), variants: [
+      { code: 'KELAPA-UTH', name: 'Kelapa Butir', unit: 'butir' },
+      { code: 'KELAPA-KPR', name: 'Kopra Kering', unit: 'kg' },
+    ]},
+    { code: 'PISANG', name: 'Pisang', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Pisang segar berbagai varian.',
+      image_url: wm('Bananas.jpg'), variants: [
+      { code: 'PISANG-MAS', name: 'Pisang Emas', unit: 'kg' },
+      { code: 'PISANG-KPK', name: 'Pisang Kepok', unit: 'kg' },
+    ]},
+    { code: 'MANGGA', name: 'Mangga', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Mangga segar dari kebun.',
+      image_url: wm('Hapus_Mango.jpg'), variants: [
+      { code: 'MANGGA-HMS', name: 'Mangga Harum Manis', unit: 'kg' },
+      { code: 'MANGGA-GDG', name: 'Mangga Gedong Gincu', unit: 'kg' },
+    ]},
+    { code: 'DURIAN', name: 'Durian', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Durian utuh dengan kulit.',
+      image_url: wm('Durian_in_black.jpg'), variants: [] },
+    { code: 'MANGGIS', name: 'Manggis', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Buah manggis segar.',
+      image_url: wm('Mangosteen.jpg'), variants: [] },
+    { code: 'VANILI', name: 'Vanili', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Polong vanili kering hasil kurasi.',
+      image_url: wm('Vanilla_6beans.JPG'), variants: [] },
+    { code: 'LADA', name: 'Lada', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Lada hitam atau lada putih kering.',
+      image_url: wm('Pepper_(Piper_nigrum).jpg'), variants: [
+      { code: 'LADA-HTM', name: 'Lada Hitam', unit: 'kg' },
+      { code: 'LADA-PTH', name: 'Lada Putih', unit: 'kg' },
+    ]},
+    { code: 'CENGKEH', name: 'Cengkeh', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Bunga cengkeh kering.',
+      image_url: wm('Cloves.jpg'), variants: [] },
+    { code: 'PALA', name: 'Pala', category: 'Hasil Kebun', default_unit: 'kg',
+      description: 'Biji pala dan fuli.',
+      image_url: wm('Muscade.jpg'), variants: [] },
+
+    // ============= HASIL TERNAK =============
+    { code: 'SAPI-POTONG', name: 'Sapi Potong', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Sapi hidup siap potong (bobot hidup).',
+      image_url: wm('Beefmaster_bull.jpg'), variants: [] },
+    { code: 'SAPI-PERAH', name: 'Sapi Perah', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Sapi perah produksi susu.',
+      image_url: wm('Cow_female_black_white.jpg'), variants: [] },
+    { code: 'KAMBING', name: 'Kambing', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Kambing hidup untuk konsumsi atau kurban.',
+      image_url: wm('Domestic_goat_kid_in_capeweed.jpg'), variants: [
+      { code: 'KAMBING-JW', name: 'Kambing Jawa', unit: 'ekor' },
+      { code: 'KAMBING-ETW', name: 'Kambing Etawa', unit: 'ekor' },
+    ]},
+    { code: 'DOMBA', name: 'Domba', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Domba hidup untuk konsumsi atau kurban.',
+      image_url: wm('Flock_of_sheep.jpg'), variants: [] },
+    { code: 'AYAM-KPG', name: 'Ayam Kampung', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Ayam kampung hidup atau karkas.',
+      image_url: wm('Ayam_Kampung.jpg'), variants: [] },
+    { code: 'AYAM-BLR', name: 'Ayam Broiler', category: 'Hasil Ternak', default_unit: 'kg',
+      description: 'Ayam pedaging (broiler) hidup atau karkas.',
+      image_url: wm('Meat_chicken.jpg'), variants: [] },
+    { code: 'BEBEK', name: 'Bebek / Itik', category: 'Hasil Ternak', default_unit: 'ekor',
+      description: 'Bebek atau itik pedaging maupun petelur.',
+      image_url: wm('Anas_platyrhynchos_male_female_quadrat.jpg'), variants: [] },
+    { code: 'SUSU-SAPI', name: 'Susu Sapi Segar', category: 'Hasil Ternak', default_unit: 'liter',
+      description: 'Susu sapi segar hasil pemerahan harian.',
+      image_url: wm('Milk_glass.jpg'), variants: [] },
+    { code: 'TELUR-AYM', name: 'Telur Ayam', category: 'Hasil Ternak', default_unit: 'kg',
+      description: 'Telur ayam ras atau kampung.',
+      image_url: wm('Eggs2.jpg'), variants: [
+      { code: 'TELUR-RAS', name: 'Telur Ayam Ras', unit: 'kg' },
+      { code: 'TELUR-KPG', name: 'Telur Ayam Kampung', unit: 'kg' },
+    ]},
+    { code: 'TELUR-BBK', name: 'Telur Bebek', category: 'Hasil Ternak', default_unit: 'butir',
+      description: 'Telur itik untuk konsumsi atau bahan asinan.',
+      image_url: wm('Duck_egg.jpg'), variants: [] },
+    { code: 'MADU', name: 'Madu', category: 'Hasil Ternak', default_unit: 'kg',
+      description: 'Madu murni dari lebah ternak.',
+      image_url: wm('Honey_comb.jpg'), variants: [] },
   ]
 
   const commodities: Record<string, any> = {}
@@ -329,8 +473,21 @@ async function main() {
   for (const def of commodityDefinitions) {
     const commodity = await prisma.commodity.upsert({
       where: { code: def.code },
-      update: { name: def.name, category: def.category, default_unit: def.default_unit },
-      create: { code: def.code, name: def.name, category: def.category, default_unit: def.default_unit },
+      update: {
+        name: def.name,
+        category: def.category,
+        default_unit: def.default_unit,
+        description: def.description,
+        image_url: def.image_url,
+      },
+      create: {
+        code: def.code,
+        name: def.name,
+        category: def.category,
+        default_unit: def.default_unit,
+        description: def.description,
+        image_url: def.image_url,
+      },
     })
     commodities[def.code] = commodity
     for (const v of def.variants) {
@@ -342,7 +499,7 @@ async function main() {
       variants[v.code] = variant
     }
   }
-  console.log('✅ Commodities and variants seeded')
+  console.log(`✅ ${commodityDefinitions.length} commodities + variants seeded (Hasil Tani / Kebun / Ternak, dengan gambar)`)
 
   // 6. Farmers + Representatives
   const farmerDefinitions = [
