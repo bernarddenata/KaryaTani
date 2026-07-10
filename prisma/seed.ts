@@ -6,6 +6,33 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding database...')
 
+  // 0. Clean up in FK-safe order
+  await prisma.auditLog.deleteMany()
+  await prisma.farmerSalePhoto.deleteMany()
+  await prisma.qcGradeBreakdown.deleteMany()
+  await prisma.qcResultItem.deleteMany()
+  await prisma.qcResult.deleteMany()
+  await prisma.dispute.deleteMany()
+  await prisma.farmerWalletMutation.deleteMany()
+  await prisma.farmerPayout.deleteMany()
+  await prisma.farmerWallet.deleteMany()
+  await prisma.farmerSale.deleteMany()
+  await prisma.qcTemplateItem.deleteMany()
+  await prisma.qcTemplate.deleteMany()
+  await prisma.priceListItem.deleteMany()
+  await prisma.priceList.deleteMany()
+  await prisma.farmerRepresentative.deleteMany()
+  await prisma.farmer.deleteMany()
+  await prisma.cooperative.deleteMany()
+  await prisma.commodityVariant.deleteMany()
+  await prisma.commodity.deleteMany()
+  await prisma.userRole.deleteMany()
+  await prisma.rolePermission.deleteMany()
+  await prisma.role.deleteMany()
+  await prisma.permission.deleteMany()
+  await prisma.user.deleteMany()
+  console.log('🧹 Cleaned existing data')
+
   // 1. Permissions
   const permissionsList = [
     { code: 'dashboard.view', name: 'Lihat Dasbor', module: 'dashboard' },
@@ -166,7 +193,7 @@ async function main() {
       create: { code: roleDef.code, name: roleDef.name, description: roleDef.description },
     })
     roles[roleDef.code] = role
-    await prisma.rolePermission.deleteMany({ where: { role_id: role.id } })
+    // rolePermissions already cleaned above
     for (const permCode of roleDef.permissions) {
       if (permissions[permCode]) {
         await prisma.rolePermission.create({
@@ -197,7 +224,7 @@ async function main() {
       create: { name: userDef.name, email: userDef.email, password_hash: passwordHash },
     })
     users[userDef.email] = user
-    await prisma.userRole.deleteMany({ where: { user_id: user.id } })
+    // userRoles already cleaned above
     await prisma.userRole.create({
       data: { user_id: user.id, role_id: roles[userDef.role].id },
     })
@@ -324,7 +351,7 @@ async function main() {
     { commodity_id: commodities['KOPI'].id, commodity_variant_id: variants['KOPI-ARA'].id, grade_name: 'Reject', grade_code: 'REJECT', price_per_unit: 0, unit: 'kg', is_reject: true, sort_order: 4 },
   ]
 
-  await prisma.priceListItem.deleteMany({ where: { price_list_id: priceList.id } })
+  // priceListItems already cleaned above
   for (const item of priceItems) {
     await prisma.priceListItem.create({ data: { price_list_id: priceList.id, ...item } })
   }
@@ -342,7 +369,7 @@ async function main() {
     },
   })
 
-  await prisma.qcTemplateItem.deleteMany({ where: { qc_template_id: cabaiTemplate.id } })
+  // qcTemplateItems already cleaned above
   const cabaiItems = [
     { item_name: 'Warna', item_code: 'WARNA', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Merah Dominan', 'Campuran', 'Hijau'], sort_order: 1 },
     { item_name: 'Kesegaran', item_code: 'SEGAR', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Segar', 'Mulai Layu', 'Layu'], sort_order: 2 },
@@ -366,7 +393,7 @@ async function main() {
     },
   })
 
-  await prisma.qcTemplateItem.deleteMany({ where: { qc_template_id: berasTemplate.id } })
+  // qcTemplateItems already cleaned above
   const berasItems = [
     { item_name: 'Kadar Air', item_code: 'AIR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 1 },
     { item_name: 'Butir Patah', item_code: 'PATAH', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 2 },
