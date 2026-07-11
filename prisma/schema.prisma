@@ -43,6 +43,7 @@ model User {
   stock_adjustments     StockAdjustment[]      @relation("CreatedByStockAdjustments")
   stock_disposals       StockDisposal[]        @relation("CreatedByStockDisposals")
   stock_deliveries      StockDelivery[]        @relation("CreatedByStockDeliveries")
+  dispute_messages      DisputeMessage[]       @relation("UserDisputeMessages")
 
   @@map("KaryaTani_users")
 }
@@ -141,6 +142,8 @@ model Cooperative {
   village      String?
   address      String?
   legal_number String?
+  phone        String?
+  email        String?
   status       String   @default("ACTIVE")
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
@@ -196,6 +199,8 @@ model Farmer {
   farmer_payouts   FarmerPayout[]
   disputes         Dispute[]
   notifications    Notification[]         @relation("FarmerNotifications")
+  devices          FarmerDevice[]
+  dispute_messages DisputeMessage[]       @relation("FarmerDisputeMessages")
 
   @@index([cooperative_id])
   @@map("KaryaTani_farmers")
@@ -653,11 +658,12 @@ model Dispute {
   updated_at          DateTime  @updatedAt
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperative_id], references: [id])
-  farmer      Farmer      @relation(fields: [farmer_id], references: [id])
-  farmer_sale FarmerSale  @relation(fields: [farmer_sale_id], references: [id])
-  qc_result   QcResult?   @relation(fields: [qc_result_id], references: [id])
-  reviewed_by User?       @relation("ReviewedByDisputes", fields: [reviewed_by_user_id], references: [id])
+  cooperative Cooperative      @relation(fields: [cooperative_id], references: [id])
+  farmer      Farmer           @relation(fields: [farmer_id], references: [id])
+  farmer_sale FarmerSale       @relation(fields: [farmer_sale_id], references: [id])
+  qc_result   QcResult?        @relation(fields: [qc_result_id], references: [id])
+  reviewed_by User?            @relation("ReviewedByDisputes", fields: [reviewed_by_user_id], references: [id])
+  messages    DisputeMessage[]
 
   @@index([cooperative_id])
   @@index([farmer_id])
@@ -890,6 +896,44 @@ model StockDelivery {
   @@index([cooperative_id])
   @@index([warehouse_id])
   @@map("KaryaTani_stock_deliveries")
+}
+
+// ============================================================================
+// FARMER APP SUPPORT (devices & dispute messages)
+// ============================================================================
+
+model FarmerDevice {
+  id           String   @id @default(uuid())
+  farmer_id    String
+  device_token String
+  platform     String   @default("android")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  farmer Farmer @relation(fields: [farmer_id], references: [id])
+
+  @@unique([farmer_id, device_token])
+  @@index([farmer_id])
+  @@map("KaryaTani_farmer_devices")
+}
+
+model DisputeMessage {
+  id               String   @id @default(uuid())
+  dispute_id       String
+  sender_type      String // FARMER | KOPERASI
+  sender_farmer_id String?
+  sender_user_id   String?
+  message          String
+  created_at       DateTime @default(now())
+
+  dispute       Dispute @relation(fields: [dispute_id], references: [id])
+  sender_farmer Farmer? @relation("FarmerDisputeMessages", fields: [sender_farmer_id], references: [id])
+  sender_user   User?   @relation("UserDisputeMessages", fields: [sender_user_id], references: [id])
+
+  @@index([dispute_id])
+  @@index([sender_farmer_id])
+  @@index([sender_user_id])
+  @@map("KaryaTani_dispute_messages")
 }
 
 // ============================================================================

@@ -9,6 +9,8 @@ export const createCooperativeSchema = z.object({
   village: z.string().optional(),
   address: z.string().optional(),
   legal_number: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email('Format email tidak valid.').optional().or(z.literal('')).transform(v => v || undefined),
 })
 
 export type CreateCooperativeInput = z.infer<typeof createCooperativeSchema>

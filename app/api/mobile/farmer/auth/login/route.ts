@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma/client'
 import { verifyPassword } from '@/lib/auth/password'
-import { generateFarmerToken } from '@/lib/auth/farmer-jwt'
+import { generateFarmerToken, generateFarmerRefreshToken } from '@/lib/auth/farmer-jwt'
 import { mobileLoginSchema } from '@/lib/validations/mobile-farmer'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import {
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return successResponse({
       access_token,
-      refresh_token: null,
+      refresh_token: generateFarmerRefreshToken(farmer.id),
       user: {
         id: farmer.id,
         farmer_id: farmer.id,

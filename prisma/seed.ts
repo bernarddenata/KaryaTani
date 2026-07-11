@@ -9,6 +9,8 @@ async function main() {
   // 0. Clean up in FK-safe order
   await prisma.auditLog.deleteMany()
   await prisma.notification.deleteMany()
+  await prisma.disputeMessage.deleteMany()
+  await prisma.farmerDevice.deleteMany()
   await prisma.stockMovement.deleteMany()
   await prisma.stockBalance.deleteMany()
   await prisma.stockAdjustment.deleteMany()
@@ -294,22 +296,24 @@ async function main() {
   // 4. Cooperatives
   const cooperative = await prisma.cooperative.upsert({
     where: { code: 'KOP-001' },
-    update: { name: 'Koperasi Desa Merah Putih Sukamaju' },
+    update: { name: 'Koperasi Desa Merah Putih Sukamaju', phone: '0221234567', email: 'sukamaju@karyatani.com' },
     create: {
       code: 'KOP-001', name: 'Koperasi Desa Merah Putih Sukamaju',
       province: 'Jawa Barat', city: 'Bandung', district: 'Sukamaju',
       village: 'Merah Putih', address: 'Jl. Koperasi No. 1, Desa Merah Putih',
       legal_number: 'BH/12345/2024',
+      phone: '0221234567', email: 'sukamaju@karyatani.com',
     },
   })
   const cooperative2 = await prisma.cooperative.upsert({
     where: { code: 'KOP-002' },
-    update: { name: 'Koperasi Desa Makmur Sentosa' },
+    update: { name: 'Koperasi Desa Makmur Sentosa', phone: '0227654321', email: 'makmur@karyatani.com' },
     create: {
       code: 'KOP-002', name: 'Koperasi Desa Makmur Sentosa',
       province: 'Jawa Barat', city: 'Bandung', district: 'Cikembar',
       village: 'Makmur', address: 'Jl. Koperasi No. 2, Desa Makmur',
       legal_number: 'BH/67890/2024',
+      phone: '0227654321', email: 'makmur@karyatani.com',
     },
   })
   console.log('✅ Cooperatives seeded (KOP-001, KOP-002)')
@@ -699,7 +703,7 @@ async function main() {
       })
       const items = QC_PROFILES[qcProfileFor(def)]
       for (const item of items) {
-        await prisma.qcTemplateItem.create({ data: { qc_template_id: template.id, ...item } })
+        await prisma.qcTemplateItem.create({ data: { qc_template_id: template.id, ...item } as any })
       }
       templatesByCoopCommodity[`${coop.id}:${def.code}`] = template
       templateCount++

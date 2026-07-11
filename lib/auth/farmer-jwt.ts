@@ -21,3 +21,22 @@ export function verifyFarmerToken(token: string): FarmerTokenPayload | null {
     return null
   }
 }
+
+interface FarmerRefreshPayload {
+  farmerId: string
+  type: 'farmer_refresh'
+}
+
+export function generateFarmerRefreshToken(farmerId: string): string {
+  return jwt.sign({ farmerId, type: 'farmer_refresh' }, JWT_SECRET, { expiresIn: '90d' })
+}
+
+export function verifyFarmerRefreshToken(token: string): FarmerRefreshPayload | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as FarmerRefreshPayload
+    if (decoded.type !== 'farmer_refresh' || !decoded.farmerId) return null
+    return decoded
+  } catch {
+    return null
+  }
+}
