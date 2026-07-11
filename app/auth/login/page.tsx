@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { Sprout, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,9 +48,11 @@ export default function LoginPage() {
       <Card className="relative z-10 w-full max-w-md border-0 shadow-2xl">
         <CardHeader className="text-center space-y-3 pb-2">
           <div className="flex justify-center">
-            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-[#1F6B3A] to-[#2E7A47] text-white shadow-lg">
-              <Sprout className="h-9 w-9" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo Karya Tani Center"
+              className="h-24 w-24 object-contain"
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-brand-dark">
             Karya Tani Center

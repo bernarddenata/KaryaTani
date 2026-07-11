@@ -31,7 +31,6 @@ import {
   Shield,
   Key,
   Settings,
-  Sprout,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -268,8 +267,8 @@ function SidebarContent({ user }: { user: SidebarUser }) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Sprout className="size-5" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-sm">
+          <img src="/logo.png" alt="Logo Karya Tani Center" className="size-full object-contain" />
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-white">
