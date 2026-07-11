@@ -20,6 +20,10 @@ const DISPUTE_ELIGIBLE_STATUSES = new Set([
   'MENUNGGU_PEMBAYARAN',
 ])
 
+// Set by the mobile upload endpoint; entity_id holds the farmer id until the
+// file is claimed by a dispute (entity_type='Dispute', entity_id=dispute id).
+const UNCLAIMED_EVIDENCE_ENTITY_TYPE = 'FarmerDisputeEvidence:DISPUTE_EVIDENCE'
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ submissionId: string }> }
@@ -77,42 +81,90 @@ export async function POST(
       )
     }
 
+    const evidencePhotoIds = [...new Set(parsed.data.evidence_photo_ids ?? [])]
+    if (evidencePhotoIds.length > 0) {
+      const ownedFiles = await prisma.fileUpload.count({
+        where: {
+          id: { in: evidencePhotoIds },
+          entity_type: UNCLAIMED_EVIDENCE_ENTITY_TYPE,
+          entity_id: farmer.id,
+        },
+      })
+      if (ownedFiles !== evidencePhotoIds.length) {
+        return validationErrorResponse([
+          {
+            field: 'evidence_photo_ids',
+            message: 'Foto bukti tidak valid atau sudah digunakan.',
+          },
+        ])
+      }
+    }
+
     const dbReason = normalizeDisputeReason(parsed.data.reason_category)
     const disputeNumber = await generateDisputeNumber()
     const latestQc = sale.qc_results[0]
 
-    const dispute = await prisma.$transaction(async (tx) => {
-      const created = await tx.dispute.create({
-        data: {
-          cooperative_id: sale.cooperative_id,
-          farmer_id: farmer.id,
-          farmer_sale_id: sale.id,
-          qc_result_id: latestQc?.id || null,
-          dispute_number: disputeNumber,
-          reason_category: dbReason,
-          farmer_note: parsed.data.farmer_note,
-          status: 'DIKIRIM',
-        },
-      })
+    let dispute
+    try {
+      dispute = await prisma.$transaction(async (tx) => {
+        const created = await tx.dispute.create({
+          data: {
+            cooperative_id: sale.cooperative_id,
+            farmer_id: farmer.id,
+            farmer_sale_id: sale.id,
+            qc_result_id: latestQc?.id || null,
+            dispute_number: disputeNumber,
+            reason_category: dbReason,
+            farmer_note: parsed.data.farmer_note,
+            status: 'DIKIRIM',
+          },
+        })
 
-      await tx.farmerSale.update({
-        where: { id: sale.id },
-        data: { status: 'KEBERATAN' },
-      })
+        if (evidencePhotoIds.length > 0) {
+          const linked = await tx.fileUpload.updateMany({
+            where: {
+              id: { in: evidencePhotoIds },
+              entity_type: UNCLAIMED_EVIDENCE_ENTITY_TYPE,
+              entity_id: farmer.id,
+            },
+            data: { entity_type: 'Dispute', entity_id: created.id },
+          })
+          // Re-checked inside the transaction: a concurrent request may have
+          // claimed one of the files after the pre-validation above.
+          if (linked.count !== evidencePhotoIds.length) {
+            throw new Error('EVIDENCE_PHOTOS_UNAVAILABLE')
+          }
+        }
 
-      await tx.notification.create({
-        data: {
-          farmer_id: farmer.id,
-          title: 'Keberatan berhasil dikirim',
-          message: `Keberatan ${created.dispute_number} untuk setoran ${sale.sale_number} sedang menunggu peninjauan pengurus koperasi.`,
-          notification_type: 'DISPUTE_SUBMITTED',
-          related_entity_type: 'Dispute',
-          related_entity_id: created.id,
-        },
-      })
+        await tx.farmerSale.update({
+          where: { id: sale.id },
+          data: { status: 'KEBERATAN' },
+        })
 
-      return created
-    })
+        await tx.notification.create({
+          data: {
+            farmer_id: farmer.id,
+            title: 'Keberatan berhasil dikirim',
+            message: `Keberatan ${created.dispute_number} untuk setoran ${sale.sale_number} sedang menunggu peninjauan pengurus koperasi.`,
+            notification_type: 'DISPUTE_SUBMITTED',
+            related_entity_type: 'Dispute',
+            related_entity_id: created.id,
+          },
+        })
+
+        return created
+      })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'EVIDENCE_PHOTOS_UNAVAILABLE') {
+        return validationErrorResponse([
+          {
+            field: 'evidence_photo_ids',
+            message: 'Foto bukti tidak valid atau sudah digunakan.',
+          },
+        ])
+      }
+      throw err
+    }
 
     const meta = getRequestMeta(request)
     await createAuditLog({

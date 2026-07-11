@@ -6,6 +6,7 @@ import { applyCooperativeScope, canAccessCooperative } from '@/lib/rbac/cooperat
 import { createFarmerSaleSchema } from '@/lib/validations/farmer-sale'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
 import { generateSaleNumber, generateBatchNumber } from '@/lib/utils/numbering'
+import { receiveSaleToTransit } from '@/lib/inventory/service'
 import {
   successResponse,
   unauthorizedResponse,
@@ -237,6 +238,25 @@ export async function POST(request: NextRequest) {
       sourceClient: 'web',
       ...meta,
     })
+
+    // Flow persediaan: berat diterima masuk ke Lokasi Transit (idempoten).
+    // Non-fatal: kegagalan persediaan tidak membatalkan penjualan.
+    try {
+      const movement = await receiveSaleToTransit(sale.id, user.id)
+      if (movement) {
+        await createAuditLog({
+          actorUserId: user.id,
+          entityType: 'StockMovement',
+          entityId: movement.id,
+          action: 'SALE_RECEIVED_TO_TRANSIT',
+          afterJson: { sale_id: sale.id, batch_number: sale.batch_number },
+          sourceClient: 'web',
+          ...meta,
+        })
+      }
+    } catch (invErr) {
+      console.error('receiveSaleToTransit failed:', invErr)
+    }
 
     return successResponse(sale, undefined, 201)
   } catch (error) {

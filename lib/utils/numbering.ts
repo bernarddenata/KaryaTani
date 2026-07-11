@@ -50,6 +50,48 @@ export async function generatePayoutNumber(date?: Date): Promise<string> {
   return `BAYAR-${dateStr}-${String(current + 1).padStart(4, '0')}`
 }
 
+export async function generateAdjustmentNumber(date?: Date): Promise<string> {
+  const d = date || new Date()
+  const dateStr = formatDate(d)
+  const pattern = `ADJ-${dateStr}-%`
+
+  const result = await prisma.$queryRaw<{ max_num: string | null }[]>`
+    SELECT MAX(right(adjustment_number, 4)) as max_num
+    FROM "KaryaTani_stock_adjustments"
+    WHERE adjustment_number LIKE ${pattern}
+  `
+  const current = parseInt(result[0]?.max_num || '0', 10)
+  return `ADJ-${dateStr}-${String(current + 1).padStart(4, '0')}`
+}
+
+export async function generateDisposalNumber(date?: Date): Promise<string> {
+  const d = date || new Date()
+  const dateStr = formatDate(d)
+  const pattern = `MUSNAH-${dateStr}-%`
+
+  const result = await prisma.$queryRaw<{ max_num: string | null }[]>`
+    SELECT MAX(right(disposal_number, 4)) as max_num
+    FROM "KaryaTani_stock_disposals"
+    WHERE disposal_number LIKE ${pattern}
+  `
+  const current = parseInt(result[0]?.max_num || '0', 10)
+  return `MUSNAH-${dateStr}-${String(current + 1).padStart(4, '0')}`
+}
+
+export async function generateDeliveryNumber(date?: Date): Promise<string> {
+  const d = date || new Date()
+  const dateStr = formatDate(d)
+  const pattern = `KIRIM-${dateStr}-%`
+
+  const result = await prisma.$queryRaw<{ max_num: string | null }[]>`
+    SELECT MAX(right(delivery_number, 4)) as max_num
+    FROM "KaryaTani_stock_deliveries"
+    WHERE delivery_number LIKE ${pattern}
+  `
+  const current = parseInt(result[0]?.max_num || '0', 10)
+  return `KIRIM-${dateStr}-${String(current + 1).padStart(4, '0')}`
+}
+
 export async function generateFarmerNumber(cooperativeCode: string): Promise<string> {
   const code = cooperativeCode.toUpperCase()
   const pattern = `${code}-%`

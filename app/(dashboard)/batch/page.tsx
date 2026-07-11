@@ -85,6 +85,43 @@ interface BatchData {
     notes?: string
     created_at: string
   }
+  stockBalances?: Array<{
+    id: string
+    grade_code?: string | null
+    grade_name?: string | null
+    unit: string
+    quantity: string
+    warehouse?: { id: string; code: string; name: string }
+    location?: { id: string; code: string; name: string; location_type: string }
+  }>
+  stockMovements?: Array<{
+    id: string
+    movement_type: string
+    quantity_in: string
+    quantity_out: string
+    balance_after: string
+    unit?: string
+    created_at: string
+    warehouse?: { id: string; code: string; name: string }
+    location?: { id: string; code: string; name: string; location_type: string }
+  }>
+}
+
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  STOK_MASUK: 'Stok Masuk',
+  PINDAH_LOKASI_KELUAR: 'Pindah Lokasi (Keluar)',
+  PINDAH_LOKASI_MASUK: 'Pindah Lokasi (Masuk)',
+  PENYESUAIAN_TAMBAH: 'Penyesuaian Tambah',
+  PENYESUAIAN_KURANG: 'Penyesuaian Kurang',
+  PEMUSNAHAN_STOK: 'Pemusnahan Stok',
+  PENGIRIMAN: 'Pengiriman',
+  KOREKSI: 'Koreksi',
+}
+
+function formatQty(value?: string | number | null, unit?: string): string {
+  const n = Number(value ?? 0)
+  const formatted = n.toLocaleString('id-ID')
+  return unit ? `${formatted} ${unit}` : formatted
 }
 
 export default function BatchPage() {
@@ -492,6 +529,82 @@ export default function BatchPage() {
                     <p className="text-sm">{batchData.dispute.notes}</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Stock Balances (This Batch) */}
+          {batchData.stockBalances && batchData.stockBalances.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Stok Saat Ini (Batch Ini)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 pr-4 font-medium">Gudang</th>
+                        <th className="text-left py-2 pr-4 font-medium">Lokasi</th>
+                        <th className="text-left py-2 pr-4 font-medium">Grade</th>
+                        <th className="text-left py-2 font-medium">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batchData.stockBalances.map((balance) => (
+                        <tr key={balance.id} className="border-b last:border-0">
+                          <td className="py-2 pr-4">{balance.warehouse?.name ?? '-'}</td>
+                          <td className="py-2 pr-4">{balance.location?.name ?? '-'}</td>
+                          <td className="py-2 pr-4">{balance.grade_name || balance.grade_code || '-'}</td>
+                          <td className="py-2">{formatQty(balance.quantity, balance.unit)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Stock Movements */}
+          {batchData.stockMovements && batchData.stockMovements.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Mutasi Stok</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 pr-4 font-medium">Tanggal</th>
+                        <th className="text-left py-2 pr-4 font-medium">Tipe</th>
+                        <th className="text-left py-2 pr-4 font-medium">Lokasi</th>
+                        <th className="text-left py-2 pr-4 font-medium">Masuk</th>
+                        <th className="text-left py-2 pr-4 font-medium">Keluar</th>
+                        <th className="text-left py-2 font-medium">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batchData.stockMovements.map((movement) => (
+                        <tr key={movement.id} className="border-b last:border-0">
+                          <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(movement.created_at)}</td>
+                          <td className="py-2 pr-4">
+                            {MOVEMENT_TYPE_LABELS[movement.movement_type] || movement.movement_type}
+                          </td>
+                          <td className="py-2 pr-4">{movement.location?.name ?? '-'}</td>
+                          <td className="py-2 pr-4 text-primary">
+                            {Number(movement.quantity_in) > 0 ? formatQty(movement.quantity_in, movement.unit) : '-'}
+                          </td>
+                          <td className="py-2 pr-4 text-destructive">
+                            {Number(movement.quantity_out) > 0 ? formatQty(movement.quantity_out, movement.unit) : '-'}
+                          </td>
+                          <td className="py-2">{formatQty(movement.balance_after, movement.unit)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           )}

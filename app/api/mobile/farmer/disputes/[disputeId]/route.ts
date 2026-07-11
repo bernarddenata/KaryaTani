@@ -36,6 +36,12 @@ export async function GET(
 
     if (!dispute) return notFoundResponse('Keberatan tidak ditemukan.')
 
+    const evidenceFiles = await prisma.fileUpload.findMany({
+      where: { entity_type: 'Dispute', entity_id: dispute.id },
+      orderBy: { created_at: 'asc' },
+      select: { id: true, file_url: true },
+    })
+
     const status = disputeStatus(dispute.status)
     const reason = disputeReasonInfo(dispute.reason_category)
 
@@ -73,6 +79,11 @@ export async function GET(
       reason_category: reason.code,
       reason_label: reason.label,
       farmer_note: dispute.farmer_note,
+      evidence_photos: evidenceFiles.map((f) => ({
+        id: f.id,
+        url: f.file_url,
+        caption: null,
+      })),
       status: status.code,
       status_label: status.label,
       manager_decision: dispute.manager_decision,

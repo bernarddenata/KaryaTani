@@ -60,7 +60,7 @@ export async function GET(
       return notFoundResponse('Batch tidak ditemukan.')
 
     // Get wallet mutations and payouts for this sale's farmer
-    const [walletMutations, payouts, auditLogs] = await Promise.all([
+    const [walletMutations, payouts, auditLogs, stockBalances, stockMovements] = await Promise.all([
       prisma.farmerWalletMutation.findMany({
         where: {
           farmer_id: sale.farmer_id,
@@ -87,6 +87,23 @@ export async function GET(
         },
         orderBy: { created_at: 'asc' },
       }),
+      prisma.stockBalance.findMany({
+        where: { batch_number: batchNumber },
+        include: {
+          warehouse: { select: { id: true, code: true, name: true } },
+          location: { select: { id: true, code: true, name: true, location_type: true } },
+          commodity: { select: { id: true, name: true, default_unit: true } },
+        },
+      }),
+      prisma.stockMovement.findMany({
+        where: { batch_number: batchNumber },
+        include: {
+          warehouse: { select: { id: true, code: true, name: true } },
+          location: { select: { id: true, code: true, name: true, location_type: true } },
+          created_by: { select: { id: true, name: true } },
+        },
+        orderBy: { created_at: 'asc' },
+      }),
     ])
 
     return successResponse({
@@ -94,6 +111,8 @@ export async function GET(
       walletMutations,
       payouts,
       auditLogs,
+      stockBalances,
+      stockMovements,
     })
   } catch (error) {
     console.error(error)

@@ -54,6 +54,26 @@ export async function GET(
     if (!(await canAccessCooperative(user, sale.cooperative_id)))
       return notFoundResponse('Batch tidak ditemukan.')
 
+    const [stockBalances, stockMovements] = await Promise.all([
+      prisma.stockBalance.findMany({
+        where: { batch_number: batchNumber, quantity: { gt: 0 } },
+        include: {
+          warehouse: { select: { id: true, code: true, name: true } },
+          location: { select: { id: true, code: true, name: true, location_type: true } },
+          commodity: { select: { id: true, name: true, default_unit: true } },
+        },
+      }),
+      prisma.stockMovement.findMany({
+        where: { batch_number: batchNumber },
+        include: {
+          warehouse: { select: { id: true, code: true, name: true } },
+          location: { select: { id: true, code: true, name: true, location_type: true } },
+          created_by: { select: { id: true, name: true } },
+        },
+        orderBy: { created_at: 'asc' },
+      }),
+    ])
+
     const status = submissionStatus(sale.status)
     const qc = sale.qc_results[0]
     const payment = paymentStatusFromSale({
@@ -160,6 +180,10 @@ export async function GET(
           resolved_at: d.resolved_at,
         }
       }),
+      inventory: {
+        balances: stockBalances,
+        movements: stockMovements,
+      },
       timeline,
     })
   } catch (error) {

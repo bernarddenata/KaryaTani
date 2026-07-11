@@ -9,6 +9,13 @@ async function main() {
   // 0. Clean up in FK-safe order
   await prisma.auditLog.deleteMany()
   await prisma.notification.deleteMany()
+  await prisma.stockMovement.deleteMany()
+  await prisma.stockBalance.deleteMany()
+  await prisma.stockAdjustment.deleteMany()
+  await prisma.stockDisposal.deleteMany()
+  await prisma.stockDelivery.deleteMany()
+  await prisma.warehouseLocation.deleteMany()
+  await prisma.warehouse.deleteMany()
   await prisma.farmerSalePhoto.deleteMany()
   await prisma.qcGradeBreakdown.deleteMany()
   await prisma.qcResultItem.deleteMany()
@@ -88,6 +95,26 @@ async function main() {
     { code: 'roles.update', name: 'Ubah Peran', module: 'roles' },
     { code: 'api_access.view', name: 'Lihat Akses API', module: 'api_access' },
     { code: 'settings.view', name: 'Lihat Pengaturan', module: 'settings' },
+    // Persediaan / Inventory
+    { code: 'warehouses.view', name: 'Lihat Gudang', module: 'warehouses' },
+    { code: 'warehouses.create', name: 'Buat Gudang', module: 'warehouses' },
+    { code: 'warehouses.update', name: 'Ubah Gudang', module: 'warehouses' },
+    { code: 'warehouse_locations.view', name: 'Lihat Lokasi Gudang', module: 'warehouse_locations' },
+    { code: 'warehouse_locations.create', name: 'Buat Lokasi Gudang', module: 'warehouse_locations' },
+    { code: 'warehouse_locations.update', name: 'Ubah Lokasi Gudang', module: 'warehouse_locations' },
+    { code: 'stock.view', name: 'Lihat Stok', module: 'stock' },
+    { code: 'stock_movements.view', name: 'Lihat Kartu Stok', module: 'stock_movements' },
+    { code: 'stock_adjustments.view', name: 'Lihat Penyesuaian Stok', module: 'stock_adjustments' },
+    { code: 'stock_adjustments.create', name: 'Buat Penyesuaian Stok', module: 'stock_adjustments' },
+    { code: 'stock_adjustments.approve', name: 'Setujui Penyesuaian Stok', module: 'stock_adjustments' },
+    { code: 'stock_disposals.view', name: 'Lihat Pemusnahan Stok', module: 'stock_disposals' },
+    { code: 'stock_disposals.create', name: 'Buat Pemusnahan Stok', module: 'stock_disposals' },
+    { code: 'stock_disposals.approve', name: 'Setujui Pemusnahan Stok', module: 'stock_disposals' },
+    { code: 'stock_deliveries.view', name: 'Lihat Pengiriman', module: 'stock_deliveries' },
+    { code: 'stock_deliveries.create', name: 'Buat Pengiriman', module: 'stock_deliveries' },
+    { code: 'stock_deliveries.complete', name: 'Selesaikan Pengiriman', module: 'stock_deliveries' },
+    { code: 'stock_reports.view', name: 'Lihat Laporan Stok', module: 'stock_reports' },
+    { code: 'stock_reports.export', name: 'Ekspor Laporan Stok', module: 'stock_reports' },
   ]
 
   const permissions: Record<string, any> = {}
@@ -124,6 +151,13 @@ async function main() {
         'farmer_wallets.view', 'farmer_wallet_mutations.view',
         'disputes.view', 'disputes.create', 'disputes.resolve', 'disputes.edit',
         'batch.view', 'reports.view', 'reports.export', 'audit_logs.view', 'settings.view',
+        'warehouses.view', 'warehouses.create', 'warehouses.update',
+        'warehouse_locations.view', 'warehouse_locations.create', 'warehouse_locations.update',
+        'stock.view', 'stock_movements.view',
+        'stock_adjustments.view', 'stock_adjustments.create', 'stock_adjustments.approve',
+        'stock_disposals.view', 'stock_disposals.create', 'stock_disposals.approve',
+        'stock_deliveries.view', 'stock_deliveries.create', 'stock_deliveries.complete',
+        'stock_reports.view', 'stock_reports.export',
       ],
     },
     {
@@ -136,6 +170,12 @@ async function main() {
         'farmer_sales.view', 'farmer_sales.edit',
         'qc_results.view', 'qc_results.create', 'qc_history.view',
         'disputes.view', 'disputes.resolve', 'disputes.edit', 'batch.view', 'reports.view',
+        'warehouses.view', 'warehouse_locations.view',
+        'stock.view', 'stock_movements.view',
+        'stock_adjustments.view', 'stock_adjustments.create',
+        'stock_disposals.view', 'stock_disposals.create',
+        'stock_deliveries.view',
+        'stock_reports.view', 'stock_reports.export',
       ],
     },
     {
@@ -150,6 +190,10 @@ async function main() {
         'farmer_sales.view', 'farmer_sales.create', 'farmer_sales.edit',
         'qc_results.view', 'qc_results.create',
         'qc_history.view', 'batch.view',
+        'warehouses.view', 'warehouse_locations.view',
+        'stock.view', 'stock_movements.view',
+        'stock_adjustments.view', 'stock_disposals.view',
+        'stock_reports.view',
       ],
     },
     {
@@ -162,6 +206,8 @@ async function main() {
         'farmer_payouts.view', 'farmer_payouts.create', 'farmer_payouts.edit',
         'farmer_wallets.view', 'farmer_wallet_mutations.view',
         'disputes.view', 'batch.view', 'reports.view', 'reports.export',
+        'stock.view', 'stock_movements.view', 'stock_deliveries.view',
+        'stock_reports.view', 'stock_reports.export',
       ],
     },
     {
@@ -178,6 +224,12 @@ async function main() {
         'qc_results.view', 'qc_history.view',
         'farmer_payouts.view', 'farmer_wallets.view', 'farmer_wallet_mutations.view',
         'disputes.view', 'disputes.create', 'batch.view', 'reports.view', 'users.view', 'settings.view',
+        'warehouses.view', 'warehouse_locations.view',
+        'stock.view', 'stock_movements.view',
+        'stock_adjustments.view', 'stock_adjustments.create',
+        'stock_disposals.view', 'stock_disposals.create',
+        'stock_deliveries.view', 'stock_deliveries.create',
+        'stock_reports.view',
       ],
     },
     {
@@ -189,6 +241,7 @@ async function main() {
         'qc_templates.view', 'farmer_sales.view', 'qc_results.view', 'qc_history.view',
         'farmer_wallets.view', 'farmer_wallet_mutations.view',
         'disputes.view', 'batch.view', 'reports.view',
+        'stock.view', 'stock_movements.view', 'stock_reports.view',
       ],
     },
   ]
@@ -781,6 +834,29 @@ async function main() {
     })
   }
   console.log('✅ Farmer wallets seeded')
+
+  // 12. Persediaan: gudang default + stok demo lewat service produksi (idempoten)
+  const {
+    getOrCreateDefaultWarehouse,
+    receiveSaleToTransit,
+    moveQcResultToStock,
+  } = await import('../lib/inventory/service')
+
+  await getOrCreateDefaultWarehouse(cooperative.id)
+  await getOrCreateDefaultWarehouse(cooperative2.id)
+  console.log('✅ Gudang Utama + lokasi default seeded (KOP-001, KOP-002)')
+
+  const demoSales = await prisma.farmerSale.findMany({
+    where: { sale_number: { in: ['JUAL-20260710-0001', 'JUAL-20260710-0002', 'JUAL-20260710-0003'] } },
+    include: { qc_results: { where: { status: { in: ['DIKIRIM', 'DISETUJUI'] } }, take: 1 } },
+  })
+  for (const s of demoSales) {
+    await receiveSaleToTransit(s.id)
+    if (s.qc_results[0]) {
+      await moveQcResultToStock(s.qc_results[0].id)
+    }
+  }
+  console.log('✅ Stok demo seeded (transit + hasil QC per grade)')
 
   console.log('\n🌾 Seed selesai!')
   console.log('\nAkun demo:')

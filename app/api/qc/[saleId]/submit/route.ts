@@ -9,6 +9,7 @@ import {
   loadActivePriceListItems,
   resolveBreakdownAgainstPriceList,
 } from '@/lib/qc/pricing'
+import { moveQcResultToStock } from '@/lib/inventory/service'
 import {
   successResponse,
   unauthorizedResponse,
@@ -279,6 +280,29 @@ export async function POST(
       sourceClient: 'mobile_qc',
       ...meta,
     })
+
+    // Flow persediaan: pindahkan stok Transit ke Stok Baik / Stok Rusak
+    // sesuai grade breakdown (idempoten). Non-fatal untuk alur QC.
+    try {
+      const movements = await moveQcResultToStock(draftQcResult.id, user.id)
+      if (movements.length > 0) {
+        await createAuditLog({
+          actorUserId: user.id,
+          entityType: 'StockMovement',
+          entityId: draftQcResult.id,
+          action: 'QC_STOCK_MOVED',
+          afterJson: {
+            qc_result_id: draftQcResult.id,
+            sale_id: saleId,
+            movement_count: movements.length,
+          },
+          sourceClient: 'mobile_qc',
+          ...meta,
+        })
+      }
+    } catch (invErr) {
+      console.error('moveQcResultToStock failed:', invErr)
+    }
 
     return successResponse({
       qc_result: {

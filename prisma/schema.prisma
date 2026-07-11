@@ -39,6 +39,10 @@ model User {
   uploaded_files        FileUpload[]           @relation("UploadedByFiles")
   notifications         Notification[]         @relation("UserNotifications")
   audit_logs            AuditLog[]             @relation("ActorAuditLogs")
+  stock_movements       StockMovement[]        @relation("CreatedByStockMovements")
+  stock_adjustments     StockAdjustment[]      @relation("CreatedByStockAdjustments")
+  stock_disposals       StockDisposal[]        @relation("CreatedByStockDisposals")
+  stock_deliveries      StockDelivery[]        @relation("CreatedByStockDeliveries")
 
   @@map("KaryaTani_users")
 }
@@ -142,16 +146,23 @@ model Cooperative {
   updated_at   DateTime @updatedAt
 
   // Relations
-  farmers           Farmer[]
-  price_lists       PriceList[]
-  qc_templates      QcTemplate[]
-  farmer_sales      FarmerSale[]
-  qc_results        QcResult[]
-  farmer_wallets    FarmerWallet[]
-  wallet_mutations  FarmerWalletMutation[]
-  farmer_payouts    FarmerPayout[]
-  disputes          Dispute[]
-  user_cooperatives UserCooperative[]
+  farmers             Farmer[]
+  price_lists         PriceList[]
+  qc_templates        QcTemplate[]
+  farmer_sales        FarmerSale[]
+  qc_results          QcResult[]
+  farmer_wallets      FarmerWallet[]
+  wallet_mutations    FarmerWalletMutation[]
+  farmer_payouts      FarmerPayout[]
+  disputes            Dispute[]
+  user_cooperatives   UserCooperative[]
+  warehouses          Warehouse[]
+  warehouse_locations WarehouseLocation[]
+  stock_balances      StockBalance[]
+  stock_movements     StockMovement[]
+  stock_adjustments   StockAdjustment[]
+  stock_disposals     StockDisposal[]
+  stock_deliveries    StockDelivery[]
 
   @@map("KaryaTani_cooperatives")
 }
@@ -249,11 +260,16 @@ model Commodity {
   updated_at   DateTime @updatedAt
 
   // Relations
-  variants         CommodityVariant[]
-  farmer_sources   FarmerSource[]
-  price_list_items PriceListItem[]
-  qc_templates     QcTemplate[]
-  farmer_sales     FarmerSale[]
+  variants          CommodityVariant[]
+  farmer_sources    FarmerSource[]
+  price_list_items  PriceListItem[]
+  qc_templates      QcTemplate[]
+  farmer_sales      FarmerSale[]
+  stock_balances    StockBalance[]
+  stock_movements   StockMovement[]
+  stock_adjustments StockAdjustment[]
+  stock_disposals   StockDisposal[]
+  stock_deliveries  StockDelivery[]
 
   @@map("KaryaTani_commodities")
 }
@@ -270,10 +286,15 @@ model CommodityVariant {
   updated_at   DateTime @updatedAt
 
   // Relations
-  commodity        Commodity       @relation(fields: [commodity_id], references: [id])
-  price_list_items PriceListItem[]
-  qc_templates     QcTemplate[]
-  farmer_sales     FarmerSale[]
+  commodity         Commodity       @relation(fields: [commodity_id], references: [id])
+  price_list_items  PriceListItem[]
+  qc_templates      QcTemplate[]
+  farmer_sales      FarmerSale[]
+  stock_balances    StockBalance[]
+  stock_movements   StockMovement[]
+  stock_adjustments StockAdjustment[]
+  stock_disposals   StockDisposal[]
+  stock_deliveries  StockDelivery[]
 
   @@index([commodity_id])
   @@map("KaryaTani_commodity_variants")
@@ -647,6 +668,231 @@ model Dispute {
 }
 
 // ============================================================================
+// INVENTORY / PERSEDIAAN
+// ============================================================================
+
+model Warehouse {
+  id             String   @id @default(uuid())
+  cooperative_id String
+  code           String
+  name           String
+  address        String?
+  status         String   @default("AKTIF")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  cooperative       Cooperative         @relation(fields: [cooperative_id], references: [id])
+  locations         WarehouseLocation[]
+  stock_balances    StockBalance[]
+  stock_movements   StockMovement[]
+  stock_adjustments StockAdjustment[]
+  stock_disposals   StockDisposal[]
+  stock_deliveries  StockDelivery[]
+
+  @@unique([cooperative_id, code])
+  @@index([cooperative_id])
+  @@map("KaryaTani_warehouses")
+}
+
+model WarehouseLocation {
+  id             String   @id @default(uuid())
+  warehouse_id   String
+  cooperative_id String
+  code           String
+  name           String
+  location_type  String   @default("LAINNYA")
+  status         String   @default("AKTIF")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  stock_balances    StockBalance[]
+  stock_movements   StockMovement[]
+  stock_adjustments StockAdjustment[]
+  stock_disposals   StockDisposal[]
+  stock_deliveries  StockDelivery[]
+
+  @@unique([warehouse_id, code])
+  @@index([warehouse_id])
+  @@index([cooperative_id])
+  @@map("KaryaTani_warehouse_locations")
+}
+
+model StockBalance {
+  id                   String   @id @default(uuid())
+  cooperative_id       String
+  warehouse_id         String
+  location_id          String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_code           String?
+  grade_name           String?
+  batch_number         String?
+  unit                 String
+  quantity             Decimal  @default(0)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  location          WarehouseLocation @relation(fields: [location_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+
+  @@unique([cooperative_id, warehouse_id, location_id, commodity_id, commodity_variant_id, grade_code, batch_number, unit], name: "stock_balance_key")
+  @@index([cooperative_id])
+  @@index([warehouse_id])
+  @@index([location_id])
+  @@index([commodity_id])
+  @@index([batch_number])
+  @@map("KaryaTani_stock_balances")
+}
+
+model StockMovement {
+  id                   String   @id @default(uuid())
+  cooperative_id       String
+  warehouse_id         String
+  location_id          String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_code           String?
+  grade_name           String?
+  batch_number         String?
+  unit                 String
+  movement_type       String
+  quantity_in          Decimal  @default(0)
+  quantity_out         Decimal  @default(0)
+  balance_before       Decimal
+  balance_after        Decimal
+  reference_type       String?
+  reference_id         String?
+  notes                String?
+  created_by_user_id   String?
+  created_at           DateTime @default(now())
+
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  location          WarehouseLocation @relation(fields: [location_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+  created_by        User?             @relation("CreatedByStockMovements", fields: [created_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([warehouse_id])
+  @@index([location_id])
+  @@index([commodity_id])
+  @@index([batch_number])
+  @@index([reference_type, reference_id])
+  @@map("KaryaTani_stock_movements")
+}
+
+model StockAdjustment {
+  id                   String   @id @default(uuid())
+  cooperative_id       String
+  warehouse_id         String
+  location_id          String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_code           String?
+  grade_name           String?
+  batch_number         String?
+  adjustment_number    String   @unique
+  adjustment_type      String
+  quantity             Decimal
+  reason               String
+  notes                String?
+  proof_file_id        String?
+  status               String   @default("DIKIRIM")
+  created_by_user_id   String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  location          WarehouseLocation @relation(fields: [location_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+  proof_file        FileUpload?       @relation("AdjustmentProofFile", fields: [proof_file_id], references: [id])
+  created_by        User?             @relation("CreatedByStockAdjustments", fields: [created_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([warehouse_id])
+  @@map("KaryaTani_stock_adjustments")
+}
+
+model StockDisposal {
+  id                   String   @id @default(uuid())
+  cooperative_id       String
+  warehouse_id         String
+  location_id          String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_code           String?
+  grade_name           String?
+  batch_number         String?
+  disposal_number      String   @unique
+  quantity             Decimal
+  reason               String
+  notes                String?
+  proof_file_id        String?
+  disposal_date        DateTime @default(now())
+  status               String   @default("DIKIRIM")
+  created_by_user_id   String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  location          WarehouseLocation @relation(fields: [location_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+  proof_file        FileUpload?       @relation("DisposalProofFile", fields: [proof_file_id], references: [id])
+  created_by        User?             @relation("CreatedByStockDisposals", fields: [created_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([warehouse_id])
+  @@map("KaryaTani_stock_disposals")
+}
+
+model StockDelivery {
+  id                   String   @id @default(uuid())
+  cooperative_id       String
+  warehouse_id         String
+  location_id          String
+  commodity_id         String
+  commodity_variant_id String?
+  grade_code           String?
+  grade_name           String?
+  batch_number         String?
+  delivery_number      String   @unique
+  quantity             Decimal
+  destination_type     String
+  destination_name     String
+  delivery_date        DateTime @default(now())
+  notes                String?
+  document_file_id     String?
+  proof_file_id        String?
+  status               String   @default("DIKIRIM")
+  created_by_user_id   String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  cooperative       Cooperative       @relation(fields: [cooperative_id], references: [id])
+  warehouse         Warehouse         @relation(fields: [warehouse_id], references: [id])
+  location          WarehouseLocation @relation(fields: [location_id], references: [id])
+  commodity         Commodity         @relation(fields: [commodity_id], references: [id])
+  commodity_variant CommodityVariant? @relation(fields: [commodity_variant_id], references: [id])
+  document_file     FileUpload?       @relation("DeliveryDocumentFile", fields: [document_file_id], references: [id])
+  proof_file        FileUpload?       @relation("DeliveryProofFile", fields: [proof_file_id], references: [id])
+  created_by        User?             @relation("CreatedByStockDeliveries", fields: [created_by_user_id], references: [id])
+
+  @@index([cooperative_id])
+  @@index([warehouse_id])
+  @@map("KaryaTani_stock_deliveries")
+}
+
+// ============================================================================
 // FILES, NOTIFICATIONS & AUDIT
 // ============================================================================
 
@@ -663,11 +909,15 @@ model FileUpload {
   created_at          DateTime @default(now())
 
   // Relations
-  uploaded_by        User?             @relation("UploadedByFiles", fields: [uploaded_by_user_id], references: [id])
-  source_proof_files FarmerSource[]    @relation("SourceProofFile")
-  sale_photo_files   FarmerSalePhoto[] @relation("SalePhotoFile")
-  result_item_proofs QcResultItem[]    @relation("ResultItemProofFile")
-  payout_proof_files FarmerPayout[]    @relation("PayoutProofFile")
+  uploaded_by          User?             @relation("UploadedByFiles", fields: [uploaded_by_user_id], references: [id])
+  source_proof_files   FarmerSource[]    @relation("SourceProofFile")
+  sale_photo_files     FarmerSalePhoto[] @relation("SalePhotoFile")
+  result_item_proofs   QcResultItem[]    @relation("ResultItemProofFile")
+  payout_proof_files   FarmerPayout[]    @relation("PayoutProofFile")
+  adjustment_proofs    StockAdjustment[] @relation("AdjustmentProofFile")
+  disposal_proofs      StockDisposal[]   @relation("DisposalProofFile")
+  delivery_documents   StockDelivery[]   @relation("DeliveryDocumentFile")
+  delivery_proofs      StockDelivery[]   @relation("DeliveryProofFile")
 
   @@index([uploaded_by_user_id])
   @@map("KaryaTani_files")

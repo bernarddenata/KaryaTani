@@ -8,7 +8,7 @@ import { formatRupiah, formatWeight, formatDate, STATUS_LABELS, STATUS_COLORS } 
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { ShoppingCart, Scale, ClipboardCheck, CheckCircle, AlertTriangle, Clock, Banknote, Wallet } from 'lucide-react'
+import { ShoppingCart, Scale, ClipboardCheck, CheckCircle, AlertTriangle, Clock, Banknote, Wallet, Boxes, PackageCheck, PackageX, Truck, Trash2 } from 'lucide-react'
 
 interface SalesReport {
   summary?: { total_count?: number; total_weight?: number | string; total_amount?: number | string }
@@ -48,6 +48,28 @@ interface PayoutsResponse {
   meta?: { total?: number }
 }
 
+interface StockBucket {
+  rows?: number
+  quantity_by_unit?: Record<string, number>
+}
+
+interface StockSummary {
+  total?: StockBucket
+  transit?: StockBucket
+  baik?: StockBucket
+  rusak?: StockBucket
+  pengiriman_hari_ini?: number
+  pemusnahan_bulan_ini?: number
+}
+
+function formatQuantityByUnit(bucket?: StockBucket): string {
+  const entries = Object.entries(bucket?.quantity_by_unit ?? {})
+  if (entries.length === 0) return '0'
+  return entries
+    .map(([unit, qty]) => `${Number(qty).toLocaleString('id-ID')} ${unit}`)
+    .join(' · ')
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [salesToday, setSalesToday] = useState<SalesReport>({})
@@ -57,6 +79,7 @@ export default function DashboardPage() {
   const [disputesReport, setDisputesReport] = useState<DisputesReport>({})
   const [commoditiesData, setCommoditiesData] = useState<CommodityItem[]>([])
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0)
+  const [stockSummary, setStockSummary] = useState<StockSummary | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -71,6 +94,7 @@ export default function DashboardPage() {
           disputesRes,
           commoditiesRes,
           payoutsRes,
+          stockSummaryRes,
         ] = await Promise.all([
           apiFetch<SalesReport>(`/api/reports/sales?date_from=${today}&date_to=${today}`),
           apiFetch<SalesReport>(`/api/reports/sales?date_from=&date_to=`),
@@ -79,6 +103,7 @@ export default function DashboardPage() {
           apiFetch<DisputesReport>(`/api/reports/disputes`),
           apiFetch<CommodityItem[]>(`/api/reports/commodities`),
           apiFetch<PayoutsResponse>(`/api/farmer-payouts?status=BELUM_DIBAYAR`),
+          apiFetch<StockSummary>(`/api/reports/stock-summary`).catch(() => ({ success: false as const, data: undefined })),
         ])
 
         if (salesTodayRes.success && salesTodayRes.data) setSalesToday(salesTodayRes.data)
@@ -93,6 +118,7 @@ export default function DashboardPage() {
         if (payoutsRes.success) {
           setPendingPayoutsCount(payoutsRes.meta?.total ?? (Array.isArray(payoutsRes.data) ? payoutsRes.data.length : 0))
         }
+        if (stockSummaryRes.success && stockSummaryRes.data) setStockSummary(stockSummaryRes.data)
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err)
       } finally {
@@ -181,6 +207,53 @@ export default function DashboardPage() {
     },
   ]
 
+  const stockStats = stockSummary
+    ? [
+        {
+          label: 'Total Stok',
+          value: formatQuantityByUnit(stockSummary.total),
+          icon: Boxes,
+          bgColor: 'bg-brand-light',
+          textColor: 'text-primary',
+        },
+        {
+          label: 'Stok Transit',
+          value: formatQuantityByUnit(stockSummary.transit),
+          icon: Clock,
+          bgColor: 'bg-warning/20',
+          textColor: 'text-warning',
+        },
+        {
+          label: 'Stok Baik',
+          value: formatQuantityByUnit(stockSummary.baik),
+          icon: PackageCheck,
+          bgColor: 'bg-primary/15',
+          textColor: 'text-primary',
+        },
+        {
+          label: 'Stok Rusak / Ditolak',
+          value: formatQuantityByUnit(stockSummary.rusak),
+          icon: PackageX,
+          bgColor: 'bg-destructive/15',
+          textColor: 'text-destructive',
+        },
+        {
+          label: 'Pengiriman Hari Ini',
+          value: (stockSummary.pengiriman_hari_ini ?? 0).toLocaleString('id-ID'),
+          icon: Truck,
+          bgColor: 'bg-info/10',
+          textColor: 'text-info',
+        },
+        {
+          label: 'Pemusnahan Bulan Ini',
+          value: (stockSummary.pemusnahan_bulan_ini ?? 0).toLocaleString('id-ID'),
+          icon: Trash2,
+          bgColor: 'bg-muted',
+          textColor: 'text-muted-foreground',
+        },
+      ]
+    : []
+
   const recentSales = (salesToday.sales ?? []).slice(0, 5)
 
   return (
@@ -217,6 +290,31 @@ export default function DashboardPage() {
               )
             })}
           </div>
+
+          {/* Persediaan Section */}
+          {stockStats.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Persediaan</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stockStats.map((stat) => {
+                  const Icon = stat.icon
+                  return (
+                    <Card key={stat.label}>
+                      <CardContent className="flex items-center gap-4 py-5">
+                        <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${stat.bgColor}`}>
+                          <Icon className={`h-6 w-6 ${stat.textColor}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-500">{stat.label}</p>
+                          <p className="text-xl font-bold text-gray-900 break-words">{stat.value}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">

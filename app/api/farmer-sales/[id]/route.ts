@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/rbac/permissions'
 import { canAccessCooperative } from '@/lib/rbac/cooperative-scope'
 import { updateFarmerSaleSchema } from '@/lib/validations/farmer-sale'
 import { createAuditLog, getRequestMeta } from '@/lib/audit/logger'
+import { receiveSaleToTransit } from '@/lib/inventory/service'
 import {
   successResponse,
   errorResponse,
@@ -145,6 +146,13 @@ export async function PATCH(
       sourceClient: 'web',
       ...meta,
     })
+
+    // Jika berat diterima baru diisi lewat edit, stok masuk transit (idempoten).
+    try {
+      await receiveSaleToTransit(id, user.id)
+    } catch (invErr) {
+      console.error('receiveSaleToTransit failed:', invErr)
+    }
 
     return successResponse(updated)
   } catch (error) {
