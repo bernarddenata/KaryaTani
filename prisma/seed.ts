@@ -625,54 +625,85 @@ async function main() {
   }
   console.log('✅ Price list and items seeded')
 
-  // 8. QC Templates
-  const cabaiTemplate = await prisma.qcTemplate.upsert({
-    where: { id: (await prisma.qcTemplate.findFirst({ where: { cooperative_id: cooperative.id, commodity_id: commodities['CABAI'].id, name: 'Template QC Cabai' } }))?.id || 'new-id' },
-    update: {},
-    create: {
-      cooperative_id: cooperative.id, commodity_id: commodities['CABAI'].id,
-      commodity_variant_id: variants['CABAI-MK'].id,
-      name: 'Template QC Cabai', version: 1,
-      valid_from: new Date('2026-01-01'), status: 'AKTIF',
-    },
-  })
-
-  // qcTemplateItems already cleaned above
-  const cabaiItems = [
-    { item_name: 'Warna', item_code: 'WARNA', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Merah Dominan', 'Campuran', 'Hijau'], sort_order: 1 },
-    { item_name: 'Kesegaran', item_code: 'SEGAR', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Segar', 'Mulai Layu', 'Layu'], sort_order: 2 },
-    { item_name: 'Kerusakan', item_code: 'RUSAK', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 3 },
-    { item_name: 'Kotoran', item_code: 'KOTOR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 4 },
-    { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 5 },
-    { item_name: 'Catatan', item_code: 'CATATAN', input_type: 'CATATAN', is_required: false, requires_proof: false, sort_order: 6 },
-  ]
-  for (const item of cabaiItems) {
-    await prisma.qcTemplateItem.create({ data: { qc_template_id: cabaiTemplate.id, ...item } })
+  // 8. QC Templates — metode pemeriksaan untuk SEMUA komoditas, per kategori.
+  // Profil parameter QC:
+  const QC_PROFILES: Record<string, Array<Record<string, any>>> = {
+    // Sayur & umbi segar (mudah rusak)
+    SAYUR: [
+      { item_name: 'Warna', item_code: 'WARNA', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Normal / Cerah', 'Campuran', 'Kusam / Menyimpang'], sort_order: 1 },
+      { item_name: 'Kesegaran', item_code: 'SEGAR', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Segar', 'Mulai Layu', 'Layu'], sort_order: 2 },
+      { item_name: 'Ukuran', item_code: 'UKURAN', input_type: 'PILIHAN', is_required: false, requires_proof: false, options_json: ['Besar', 'Sedang', 'Kecil', 'Campuran'], sort_order: 3 },
+      { item_name: 'Kerusakan', item_code: 'RUSAK', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, help_text: 'Perkiraan persentase yang busuk, memar, atau cacat.', sort_order: 4 },
+      { item_name: 'Kotoran', item_code: 'KOTOR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 5 },
+      { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 6 },
+      { item_name: 'Catatan', item_code: 'CATATAN', input_type: 'CATATAN', is_required: false, requires_proof: false, sort_order: 7 },
+    ],
+    // Biji-bijian & serealia (beras, padi, jagung, kedelai, kacang)
+    BIJI: [
+      { item_name: 'Kadar Air', item_code: 'AIR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, help_text: 'Ukur dengan moisture meter bila tersedia.', sort_order: 1 },
+      { item_name: 'Butir Patah / Cacat', item_code: 'PATAH', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 2 },
+      { item_name: 'Kotoran / Benda Asing', item_code: 'KOTOR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 3 },
+      { item_name: 'Bau', item_code: 'BAU', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Normal', 'Apek', 'Tidak Layak'], sort_order: 4 },
+      { item_name: 'Serangan Hama', item_code: 'HAMA', input_type: 'YA_TIDAK', is_required: true, requires_proof: false, help_text: 'Ada tanda kutu, ulat, atau lubang gerekan?', sort_order: 5 },
+      { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 6 },
+      { item_name: 'Catatan', item_code: 'CATATAN', input_type: 'CATATAN', is_required: false, requires_proof: false, sort_order: 7 },
+    ],
+    // Hasil kebun (kopi, kakao, buah, rempah, karet, sawit, dll.)
+    KEBUN: [
+      { item_name: 'Kematangan', item_code: 'MATANG', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Matang Optimal', 'Setengah Matang', 'Mentah', 'Terlalu Matang'], sort_order: 1 },
+      { item_name: 'Kadar Air', item_code: 'AIR', input_type: 'PERSENTASE', is_required: false, requires_proof: false, min_value: 0, max_value: 100, help_text: 'Untuk komoditas kering (kopi, kakao, rempah).', sort_order: 2 },
+      { item_name: 'Cacat / Kerusakan', item_code: 'CACAT', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 3 },
+      { item_name: 'Kotoran / Benda Asing', item_code: 'KOTOR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 4 },
+      { item_name: 'Aroma', item_code: 'AROMA', input_type: 'PILIHAN', is_required: false, requires_proof: false, options_json: ['Normal / Khas', 'Menyimpang'], sort_order: 5 },
+      { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 6 },
+      { item_name: 'Catatan', item_code: 'CATATAN', input_type: 'CATATAN', is_required: false, requires_proof: false, sort_order: 7 },
+    ],
+    // Hasil ternak (hewan hidup, telur, susu, madu)
+    TERNAK: [
+      { item_name: 'Kondisi Fisik', item_code: 'FISIK', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Sehat / Baik', 'Kurang Sehat', 'Buruk'], sort_order: 1 },
+      { item_name: 'Bebas Tanda Penyakit', item_code: 'SEHAT', input_type: 'YA_TIDAK', is_required: true, requires_proof: false, help_text: 'Tidak ada luka, kudis, mata sayu, atau gejala penyakit.', sort_order: 2 },
+      { item_name: 'Berat Rata-rata', item_code: 'BERAT', input_type: 'ANGKA', is_required: false, requires_proof: false, min_value: 0, max_value: 2000, help_text: 'Kg per ekor / per satuan (jika relevan).', sort_order: 3 },
+      { item_name: 'Kebersihan', item_code: 'BERSIH', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Bersih', 'Cukup', 'Kotor'], sort_order: 4 },
+      { item_name: 'Cacat / Kerusakan', item_code: 'CACAT', input_type: 'PERSENTASE', is_required: false, requires_proof: false, min_value: 0, max_value: 100, help_text: 'Mis. telur retak, susu menggumpal.', sort_order: 5 },
+      { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 6 },
+      { item_name: 'Catatan', item_code: 'CATATAN', input_type: 'CATATAN', is_required: false, requires_proof: false, sort_order: 7 },
+    ],
   }
 
-  const berasTemplate = await prisma.qcTemplate.upsert({
-    where: { id: (await prisma.qcTemplate.findFirst({ where: { cooperative_id: cooperative.id, commodity_id: commodities['BERAS'].id, name: 'Template QC Beras' } }))?.id || 'new-id' },
-    update: {},
-    create: {
-      cooperative_id: cooperative.id, commodity_id: commodities['BERAS'].id,
-      commodity_variant_id: variants['BERAS-MED'].id,
-      name: 'Template QC Beras', version: 1,
-      valid_from: new Date('2026-01-01'), status: 'AKTIF',
-    },
-  })
-
-  // qcTemplateItems already cleaned above
-  const berasItems = [
-    { item_name: 'Kadar Air', item_code: 'AIR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 1 },
-    { item_name: 'Butir Patah', item_code: 'PATAH', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 2 },
-    { item_name: 'Kotoran', item_code: 'KOTOR', input_type: 'PERSENTASE', is_required: true, requires_proof: false, min_value: 0, max_value: 100, sort_order: 3 },
-    { item_name: 'Bau', item_code: 'BAU', input_type: 'PILIHAN', is_required: true, requires_proof: false, options_json: ['Normal', 'Apek', 'Tidak Layak'], sort_order: 4 },
-    { item_name: 'Foto QC', item_code: 'FOTO', input_type: 'FOTO', is_required: true, requires_proof: true, sort_order: 5 },
-  ]
-  for (const item of berasItems) {
-    await prisma.qcTemplateItem.create({ data: { qc_template_id: berasTemplate.id, ...item } })
+  const GRAIN_CODES = new Set(['BERAS', 'PADI', 'JAGUNG', 'KEDELAI', 'KACANG-TANAH'])
+  function qcProfileFor(def: { code: string; category: string }): string {
+    if (def.category === 'Hasil Ternak') return 'TERNAK'
+    if (def.category === 'Hasil Kebun') return 'KEBUN'
+    return GRAIN_CODES.has(def.code) ? 'BIJI' : 'SAYUR'
   }
-  console.log('✅ QC templates seeded')
+
+  // Template AKTIF untuk setiap komoditas di setiap koperasi.
+  const templatesByCoopCommodity: Record<string, any> = {}
+  let templateCount = 0
+  for (const coop of [cooperative, cooperative2]) {
+    for (const def of commodityDefinitions) {
+      const commodity = commodities[def.code]
+      const template = await prisma.qcTemplate.create({
+        data: {
+          cooperative_id: coop.id,
+          commodity_id: commodity.id,
+          name: `Template QC ${def.name}`,
+          version: 1,
+          valid_from: new Date('2026-01-01'),
+          status: 'AKTIF',
+        },
+      })
+      const items = QC_PROFILES[qcProfileFor(def)]
+      for (const item of items) {
+        await prisma.qcTemplateItem.create({ data: { qc_template_id: template.id, ...item } })
+      }
+      templatesByCoopCommodity[`${coop.id}:${def.code}`] = template
+      templateCount++
+    }
+  }
+  const cabaiTemplate = templatesByCoopCommodity[`${cooperative.id}:CABAI`]
+  const berasTemplate = templatesByCoopCommodity[`${cooperative.id}:BERAS`]
+  console.log(`✅ ${templateCount} QC templates seeded (${commodityDefinitions.length} komoditas × 2 koperasi)`)
 
   // 9. Demo Sale - Pak Budi sells Cabai Merah Keriting, 100kg, QC done, price calculated
   const adminUser = users['admin@karyatani.local']
@@ -812,6 +843,7 @@ async function main() {
       data: {
         cooperative_id: pakJoko.cooperative_id, farmer_id: pakJoko.id,
         commodity_id: commodities['KOPI'].id, commodity_variant_id: variants['KOPI-ARA'].id,
+        qc_template_id: templatesByCoopCommodity[`${pakJoko.cooperative_id}:KOPI`]?.id ?? null,
         sale_number: 'JUAL-20260710-0003', batch_number: 'BATCH-KOPI-20260710-0001',
         initial_weight: 30, received_weight: 28,
         status: 'MENUNGGU_QC', notes: 'Kopi arabika dari Pak Joko',
