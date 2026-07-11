@@ -26,6 +26,7 @@ export async function GET() {
       { name: 'Price Lists', description: 'Manajemen daftar harga' },
       { name: 'Farmer Sales', description: 'Manajemen penjualan hasil tani' },
       { name: 'Batch', description: 'Informasi batch penjualan' },
+      { name: 'Persediaan / Inventory', description: 'Modul persediaan: gudang, lokasi gudang, saldo stok, mutasi stok, penyesuaian, pemusnahan, dan pengiriman. Semua endpoint mengikuti pemetaan akses koperasi.' },
       { name: 'QC Templates', description: 'Manajemen template quality control' },
       { name: 'QC', description: 'Proses quality control penjualan' },
       { name: 'QC Results', description: 'Hasil quality control' },
@@ -3125,7 +3126,7 @@ export async function GET() {
           tags: ['Batch'],
           summary: 'Detail batch',
           description:
-            'Mengembalikan informasi lengkap batch penjualan berdasarkan nomor batch, termasuk data penjualan, mutasi dompet, pembayaran, dan log audit.',
+            'Mengembalikan informasi lengkap batch penjualan berdasarkan nomor batch, termasuk data penjualan, mutasi dompet, pembayaran, dan log audit. Kini juga menyertakan `stockBalances` (saldo stok per lokasi untuk batch ini) dan `stockMovements` (riwayat mutasi stok batch ini) dari modul persediaan.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -3310,7 +3311,7 @@ export async function GET() {
         get: {
           tags: ['Batch', 'Mobile QC / TaniTrust QC'],
           summary: 'Detail traceability batch',
-          description: 'Mengembalikan detail lengkap traceability untuk satu batch: data penjualan, petani, komoditas, koperasi, hasil QC, estimasi pembayaran, foto bukti, sengketa terkait, dan timeline status.',
+          description: 'Mengembalikan detail lengkap traceability untuk satu batch: data penjualan, petani, komoditas, koperasi, hasil QC, estimasi pembayaran, foto bukti, sengketa terkait, dan timeline status. Kini juga menyertakan objek `inventory` berisi `inventory.balances` (saldo stok batch per lokasi gudang) dan `inventory.movements` (riwayat mutasi stok batch) dari modul persediaan.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -5543,6 +5544,1732 @@ export async function GET() {
                                   total_paid: { type: 'number' },
                                 },
                               },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+
+      // ==================== Persediaan / Inventory ====================
+      '/warehouses': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar gudang',
+          description:
+            'Mengembalikan daftar gudang dengan paginasi. Difilter otomatis berdasarkan cakupan koperasi pengguna. Memerlukan permission `warehouses.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] }, description: 'Filter status gudang' },
+            { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Pencarian pada kode atau nama gudang' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar gudang',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/Warehouse' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Buat gudang',
+          description:
+            'Membuat gudang baru. Saat gudang berhasil dibuat, 3 lokasi default otomatis ikut dibuat (TRANSIT, STOK_BAIK, STOK_RUSAK). Memerlukan permission `warehouses.create` dan akses ke koperasi terkait.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['cooperative_id', 'code', 'name'],
+                  properties: {
+                    cooperative_id: { type: 'string', format: 'uuid' },
+                    code: { type: 'string', maxLength: 30, example: 'GDG-01' },
+                    name: { type: 'string', example: 'Gudang Utama' },
+                    address: { type: 'string' },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'], default: 'AKTIF' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Gudang berhasil dibuat (termasuk lokasi default)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/Warehouse' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': {
+              description: 'Tidak memiliki permission atau koperasi di luar cakupan akses',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'FORBIDDEN', message: 'Anda tidak memiliki akses ke koperasi ini.' } },
+                },
+              },
+            },
+            '409': {
+              description: 'Kode gudang duplikat dalam koperasi yang sama',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'CONFLICT', message: 'Kode gudang sudah digunakan.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/warehouses/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail gudang',
+          description: 'Mengembalikan detail gudang beserta daftar lokasi di dalamnya. Memerlukan permission `warehouses.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID gudang' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail gudang (termasuk locations)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/Warehouse' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        patch: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Ubah gudang',
+          description: 'Memperbarui data gudang (kode, nama, alamat, status). Memerlukan permission `warehouses.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID gudang' },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    code: { type: 'string', maxLength: 30 },
+                    name: { type: 'string' },
+                    address: { type: 'string' },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Gudang berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/Warehouse' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Kode gudang duplikat',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'CONFLICT', message: 'Kode gudang sudah digunakan.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/warehouse-locations': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar lokasi gudang',
+          description:
+            'Mengembalikan daftar lokasi gudang dengan paginasi. Difilter otomatis berdasarkan cakupan koperasi pengguna. Memerlukan permission `warehouses.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'location_type', in: 'query', schema: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] }, description: 'Filter jenis lokasi' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] }, description: 'Filter status lokasi' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar lokasi gudang',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/WarehouseLocation' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Buat lokasi gudang',
+          description:
+            'Membuat lokasi baru di dalam gudang. Memerlukan permission `warehouses.create` dan akses ke koperasi pemilik gudang.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['warehouse_id', 'code', 'name', 'location_type'],
+                  properties: {
+                    warehouse_id: { type: 'string', format: 'uuid' },
+                    code: { type: 'string', maxLength: 30, example: 'LOK-01' },
+                    name: { type: 'string', example: 'Rak Penyimpanan A' },
+                    location_type: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'], default: 'AKTIF' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Lokasi gudang berhasil dibuat',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/WarehouseLocation' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Kode lokasi duplikat dalam gudang yang sama',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'CONFLICT', message: 'Kode lokasi sudah digunakan.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/warehouse-locations/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail lokasi gudang',
+          description: 'Mengembalikan detail satu lokasi gudang. Memerlukan permission `warehouses.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID lokasi gudang' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail lokasi gudang',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/WarehouseLocation' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        patch: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Ubah lokasi gudang',
+          description: 'Memperbarui data lokasi gudang (kode, nama, jenis lokasi, status). Memerlukan permission `warehouses.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID lokasi gudang' },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    code: { type: 'string', maxLength: 30 },
+                    name: { type: 'string' },
+                    location_type: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] },
+                    status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Lokasi gudang berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/WarehouseLocation' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/stock-balances': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar saldo stok',
+          description:
+            'Mengembalikan saldo stok saat ini per kombinasi gudang, lokasi, komoditas, varian, grade, batch, dan satuan. Endpoint read-only — saldo hanya berubah melalui dokumen stok (penyesuaian, pemusnahan, pengiriman, dan proses QC). Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'location_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan lokasi gudang' },
+            { name: 'location_type', in: 'query', schema: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] }, description: 'Filter jenis lokasi' },
+            { name: 'commodity_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan komoditas' },
+            { name: 'commodity_variant_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan varian komoditas' },
+            { name: 'grade_code', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan kode grade' },
+            { name: 'batch_number', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan nomor batch' },
+            { name: 'only_nonzero', in: 'query', schema: { type: 'boolean', default: true }, description: 'Jika true (default), hanya saldo dengan kuantitas > 0. Kirim `false` untuk menampilkan semua baris saldo.' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar saldo stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/StockBalance' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/stock-balances/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail saldo stok',
+          description:
+            'Mengembalikan detail satu baris saldo stok beserta `recent_movements` — daftar mutasi stok terbaru yang terkait dengan saldo tersebut. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID saldo stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail saldo stok + mutasi terbaru',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            allOf: [
+                              { $ref: '#/components/schemas/StockBalance' },
+                              {
+                                type: 'object',
+                                properties: {
+                                  recent_movements: {
+                                    type: 'array',
+                                    items: { $ref: '#/components/schemas/StockMovement' },
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/stock-movements': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar mutasi stok',
+          description:
+            'Mengembalikan riwayat mutasi stok (kartu stok) dengan paginasi. Setiap mutasi mencatat kuantitas masuk/keluar beserta saldo sebelum dan sesudah. Memerlukan permission `stock_movements.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'location_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan lokasi gudang' },
+            { name: 'commodity_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan komoditas' },
+            { name: 'commodity_variant_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan varian komoditas' },
+            { name: 'grade_code', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan kode grade' },
+            { name: 'batch_number', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan nomor batch' },
+            { name: 'movement_type', in: 'query', schema: { type: 'string', enum: ['STOK_MASUK', 'PINDAH_LOKASI_KELUAR', 'PINDAH_LOKASI_MASUK', 'PENYESUAIAN_TAMBAH', 'PENYESUAIAN_KURANG', 'PEMUSNAHAN_STOK', 'PENGIRIMAN', 'KOREKSI'] }, description: 'Filter jenis mutasi stok' },
+            { name: 'reference_type', in: 'query', schema: { type: 'string' }, description: 'Filter jenis dokumen sumber (mis. StockAdjustment, StockDisposal, StockDelivery, FarmerSale)' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar mutasi stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/StockMovement' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/stock-movements/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail mutasi stok',
+          description: 'Mengembalikan detail satu mutasi stok. Memerlukan permission `stock_movements.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID mutasi stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail mutasi stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockMovement' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/stock-adjustments': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar penyesuaian stok',
+          description:
+            'Mengembalikan daftar dokumen penyesuaian stok (tambah/kurang) dengan paginasi. Memerlukan permission `stock_adjustments.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'adjustment_type', in: 'query', schema: { type: 'string', enum: ['TAMBAH', 'KURANG'] }, description: 'Filter jenis penyesuaian' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['DIKIRIM', 'DISETUJUI', 'DIBATALKAN'] }, description: 'Filter status dokumen' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar penyesuaian stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/StockAdjustment' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Buat penyesuaian stok',
+          description:
+            'Membuat dokumen penyesuaian stok (tambah/kurang) dengan status awal DIKIRIM. Jika pembuat memiliki permission `stock_adjustments.approve`, dokumen otomatis disetujui dan saldo stok langsung diperbarui. Memerlukan permission `stock_adjustments.create` dan akses ke koperasi pemilik gudang.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['warehouse_id', 'location_id', 'commodity_id', 'adjustment_type', 'quantity', 'reason'],
+                  properties: {
+                    warehouse_id: { type: 'string', format: 'uuid' },
+                    location_id: { type: 'string', format: 'uuid', description: 'Lokasi harus berada di dalam gudang yang dipilih' },
+                    commodity_id: { type: 'string', format: 'uuid' },
+                    commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+                    grade_code: { type: 'string', nullable: true },
+                    grade_name: { type: 'string', nullable: true },
+                    batch_number: { type: 'string', nullable: true },
+                    adjustment_type: { type: 'string', enum: ['TAMBAH', 'KURANG'] },
+                    quantity: { type: 'number', exclusiveMinimum: 0, description: 'Jumlah harus lebih besar dari 0' },
+                    reason: { type: 'string', description: 'Alasan penyesuaian (wajib)' },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true, description: 'ID file bukti dari /files/upload' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Penyesuaian stok berhasil dibuat (otomatis disetujui bila pembuat punya permission approve)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockAdjustment' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '422': {
+              description: 'Data tidak valid atau stok tidak mencukupi',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-adjustments/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail penyesuaian stok',
+          description: 'Mengembalikan detail satu dokumen penyesuaian stok. Memerlukan permission `stock_adjustments.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID penyesuaian stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail penyesuaian stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockAdjustment' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        patch: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Ubah penyesuaian stok',
+          description:
+            'Memperbarui dokumen penyesuaian stok yang masih berstatus DIKIRIM (belum disetujui/dibatalkan). Memerlukan permission `stock_adjustments.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID penyesuaian stok' },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
+                    reason: { type: 'string' },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Penyesuaian stok berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockAdjustment' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status yang dapat diubah',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/stock-adjustments/{id}/approve': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Setujui penyesuaian stok',
+          description:
+            'Menyetujui dokumen penyesuaian stok berstatus DIKIRIM. Saldo stok diperbarui (bertambah atau berkurang) dan mutasi stok dicatat. Status dokumen menjadi DISETUJUI. Memerlukan permission `stock_adjustments.approve`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID penyesuaian stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Penyesuaian stok disetujui dan saldo diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockAdjustment' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status DIKIRIM',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Stok tidak mencukupi untuk penyesuaian KURANG',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-adjustments/{id}/cancel': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Batalkan penyesuaian stok',
+          description:
+            'Membatalkan dokumen penyesuaian stok yang belum disetujui. Status dokumen menjadi DIBATALKAN. Memerlukan permission `stock_adjustments.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID penyesuaian stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Penyesuaian stok dibatalkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockAdjustment' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen bukan berstatus DIKIRIM (sudah disetujui atau dibatalkan)',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-disposals': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar pemusnahan stok',
+          description:
+            'Mengembalikan daftar dokumen pemusnahan stok dengan paginasi. Memerlukan permission `stock_disposals.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] }, description: 'Filter status dokumen' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar pemusnahan stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/StockDisposal' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Buat pemusnahan stok',
+          description:
+            'Membuat dokumen pemusnahan stok (mis. untuk stok rusak) dengan status awal DIKIRIM. Jika pembuat memiliki permission `stock_disposals.approve`, dokumen otomatis diselesaikan dan stok langsung dikurangi. Memerlukan permission `stock_disposals.create` dan akses ke koperasi pemilik gudang.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['warehouse_id', 'location_id', 'commodity_id', 'quantity', 'reason'],
+                  properties: {
+                    warehouse_id: { type: 'string', format: 'uuid' },
+                    location_id: { type: 'string', format: 'uuid', description: 'Lokasi asal stok yang dimusnahkan' },
+                    commodity_id: { type: 'string', format: 'uuid' },
+                    commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+                    grade_code: { type: 'string', nullable: true },
+                    grade_name: { type: 'string', nullable: true },
+                    batch_number: { type: 'string', nullable: true },
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
+                    reason: { type: 'string', description: 'Alasan pemusnahan (wajib)' },
+                    disposal_date: { type: 'string', format: 'date', description: 'Tanggal pemusnahan (default hari ini)' },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Pemusnahan stok berhasil dibuat (otomatis selesai bila pembuat punya permission approve)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDisposal' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '422': {
+              description: 'Data tidak valid atau stok tidak mencukupi',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-disposals/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail pemusnahan stok',
+          description: 'Mengembalikan detail satu dokumen pemusnahan stok. Memerlukan permission `stock_disposals.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pemusnahan stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail pemusnahan stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDisposal' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        patch: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Ubah pemusnahan stok',
+          description:
+            'Memperbarui dokumen pemusnahan stok yang masih berstatus DIKIRIM. Memerlukan permission `stock_disposals.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pemusnahan stok' },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
+                    reason: { type: 'string' },
+                    disposal_date: { type: 'string', format: 'date' },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Pemusnahan stok berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDisposal' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status yang dapat diubah',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/stock-disposals/{id}/complete': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Selesaikan pemusnahan stok',
+          description:
+            'Menyelesaikan dokumen pemusnahan stok berstatus DIKIRIM: stok dikurangi dari lokasi asal dan mutasi PEMUSNAHAN_STOK dicatat. Status dokumen menjadi SELESAI. Memerlukan permission `stock_disposals.approve`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pemusnahan stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Pemusnahan stok selesai dan saldo diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDisposal' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status DIKIRIM',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Stok tidak mencukupi',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-disposals/{id}/cancel': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Batalkan pemusnahan stok',
+          description:
+            'Membatalkan dokumen pemusnahan stok yang belum diselesaikan. Status dokumen menjadi DIBATALKAN. Memerlukan permission `stock_disposals.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pemusnahan stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Pemusnahan stok dibatalkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDisposal' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen bukan berstatus DIKIRIM (sudah selesai atau dibatalkan)',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-deliveries': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Daftar pengiriman stok',
+          description:
+            'Mengembalikan daftar dokumen pengiriman stok keluar dengan paginasi. Memerlukan permission `stock_deliveries.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'destination_type', in: 'query', schema: { type: 'string', enum: ['PEMBELI', 'KOPERASI_LAIN', 'GUDANG_LAIN', 'PROGRAM_PEMERINTAH', 'LAINNYA'] }, description: 'Filter jenis tujuan pengiriman' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] }, description: 'Filter status dokumen' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+            { $ref: '#/components/parameters/PageParam' },
+            { $ref: '#/components/parameters/LimitParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar pengiriman stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { type: 'array', items: { $ref: '#/components/schemas/StockDelivery' } },
+                          meta: { $ref: '#/components/schemas/PaginationMeta' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Buat pengiriman stok',
+          description:
+            'Membuat dokumen pengiriman stok keluar (ke pembeli, koperasi lain, gudang lain, program pemerintah, atau tujuan lainnya) dengan status awal DIKIRIM. Jika pembuat memiliki permission `stock_deliveries.approve`, dokumen otomatis diselesaikan dan stok langsung dikurangi. Memerlukan permission `stock_deliveries.create` dan akses ke koperasi pemilik gudang.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['warehouse_id', 'location_id', 'commodity_id', 'quantity', 'destination_type', 'destination_name'],
+                  properties: {
+                    warehouse_id: { type: 'string', format: 'uuid' },
+                    location_id: { type: 'string', format: 'uuid', description: 'Lokasi asal stok yang dikirim' },
+                    commodity_id: { type: 'string', format: 'uuid' },
+                    commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+                    grade_code: { type: 'string', nullable: true },
+                    grade_name: { type: 'string', nullable: true },
+                    batch_number: { type: 'string', nullable: true },
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
+                    destination_type: { type: 'string', enum: ['PEMBELI', 'KOPERASI_LAIN', 'GUDANG_LAIN', 'PROGRAM_PEMERINTAH', 'LAINNYA'] },
+                    destination_name: { type: 'string', description: 'Nama tujuan pengiriman (wajib)' },
+                    delivery_date: { type: 'string', format: 'date', description: 'Tanggal pengiriman (default hari ini)' },
+                    document_file_id: { type: 'string', format: 'uuid', nullable: true, description: 'ID file surat jalan / dokumen pengiriman' },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Pengiriman stok berhasil dibuat (otomatis selesai bila pembuat punya permission approve)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDelivery' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '422': {
+              description: 'Data tidak valid atau stok tidak mencukupi',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-deliveries/{id}': {
+        get: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Detail pengiriman stok',
+          description: 'Mengembalikan detail satu dokumen pengiriman stok. Memerlukan permission `stock_deliveries.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pengiriman stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Detail pengiriman stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDelivery' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        patch: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Ubah pengiriman stok',
+          description:
+            'Memperbarui dokumen pengiriman stok yang masih berstatus DIKIRIM. Memerlukan permission `stock_deliveries.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pengiriman stok' },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    quantity: { type: 'number', exclusiveMinimum: 0 },
+                    destination_type: { type: 'string', enum: ['PEMBELI', 'KOPERASI_LAIN', 'GUDANG_LAIN', 'PROGRAM_PEMERINTAH', 'LAINNYA'] },
+                    destination_name: { type: 'string' },
+                    delivery_date: { type: 'string', format: 'date' },
+                    document_file_id: { type: 'string', format: 'uuid', nullable: true },
+                    notes: { type: 'string' },
+                    proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Pengiriman stok berhasil diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDelivery' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status yang dapat diubah',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/stock-deliveries/{id}/complete': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Selesaikan pengiriman stok',
+          description:
+            'Menyelesaikan dokumen pengiriman stok berstatus DIKIRIM: stok dikurangi dari lokasi asal dan mutasi PENGIRIMAN dicatat. Status dokumen menjadi SELESAI. Memerlukan permission `stock_deliveries.approve`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pengiriman stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Pengiriman stok selesai dan saldo diperbarui',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDelivery' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen tidak dalam status DIKIRIM',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+            '422': {
+              description: 'Stok tidak mencukupi',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INSUFFICIENT_STOCK', message: 'Stok tidak mencukupi.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/stock-deliveries/{id}/cancel': {
+        post: {
+          tags: ['Persediaan / Inventory'],
+          summary: 'Batalkan pengiriman stok',
+          description:
+            'Membatalkan dokumen pengiriman stok yang belum diselesaikan. Status dokumen menjadi DIBATALKAN. Memerlukan permission `stock_deliveries.edit`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID pengiriman stok' },
+          ],
+          responses: {
+            '200': {
+              description: 'Pengiriman stok dibatalkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      { type: 'object', properties: { data: { $ref: '#/components/schemas/StockDelivery' } } },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Dokumen bukan berstatus DIKIRIM (sudah selesai atau dibatalkan)',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { success: false, error: { code: 'INVALID_STATUS', message: 'Dokumen tidak dalam status yang dapat diproses.' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/reports/stock-balances': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan saldo stok',
+          description:
+            'Mengembalikan seluruh baris saldo stok (tanpa paginasi) beserta ringkasan total baris dan total kuantitas per satuan. Mendukung filter cooperative_id, warehouse_id, location_id, commodity_id, grade_code, dan batch_number. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'location_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan lokasi gudang' },
+            { name: 'commodity_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan komoditas' },
+            { name: 'grade_code', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan kode grade' },
+            { name: 'batch_number', in: 'query', schema: { type: 'string' }, description: 'Filter berdasarkan nomor batch' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan saldo stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              balances: { type: 'array', items: { $ref: '#/components/schemas/StockBalance' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' }, example: { kg: 1250.5 } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-movements': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan mutasi stok',
+          description:
+            'Mengembalikan riwayat mutasi stok (maks 1000 baris terbaru) beserta ringkasan total kuantitas masuk dan keluar per satuan. Mendukung filter cooperative_id, warehouse_id, movement_type, date_from, dan date_to. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'movement_type', in: 'query', schema: { type: 'string', enum: ['STOK_MASUK', 'PINDAH_LOKASI_KELUAR', 'PINDAH_LOKASI_MASUK', 'PENYESUAIAN_TAMBAH', 'PENYESUAIAN_KURANG', 'PEMUSNAHAN_STOK', 'PENGIRIMAN', 'KOREKSI'] }, description: 'Filter jenis mutasi' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan mutasi stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              movements: { type: 'array', items: { $ref: '#/components/schemas/StockMovement' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_in_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                  quantity_out_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-transit': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan stok transit',
+          description:
+            'Mengembalikan saldo stok yang berada di lokasi bertipe TRANSIT (stok hasil QC yang belum dipindahkan ke lokasi penyimpanan) beserta ringkasan total per satuan. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan stok transit',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              balances: { type: 'array', items: { $ref: '#/components/schemas/StockBalance' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-bad': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan stok rusak',
+          description:
+            'Mengembalikan saldo stok yang berada di lokasi bertipe STOK_RUSAK beserta ringkasan total per satuan. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan stok rusak',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              balances: { type: 'array', items: { $ref: '#/components/schemas/StockBalance' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-deliveries': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan pengiriman stok',
+          description:
+            'Mengembalikan daftar dokumen pengiriman stok beserta ringkasan total baris dan kuantitas per satuan. Mendukung filter cooperative_id, warehouse_id, status, date_from, dan date_to. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] }, description: 'Filter status dokumen' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan pengiriman stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              deliveries: { type: 'array', items: { $ref: '#/components/schemas/StockDelivery' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-disposals': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Laporan pemusnahan stok',
+          description:
+            'Mengembalikan daftar dokumen pemusnahan stok beserta ringkasan total baris dan kuantitas per satuan. Mendukung filter cooperative_id, warehouse_id, status, date_from, dan date_to. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] }, description: 'Filter status dokumen' },
+            { $ref: '#/components/parameters/DateFromParam' },
+            { $ref: '#/components/parameters/DateToParam' },
+          ],
+          responses: {
+            '200': {
+              description: 'Laporan pemusnahan stok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              disposals: { type: 'array', items: { $ref: '#/components/schemas/StockDisposal' } },
+                              summary: {
+                                type: 'object',
+                                properties: {
+                                  total_rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/reports/stock-summary': {
+        get: {
+          tags: ['Persediaan / Inventory', 'Reports'],
+          summary: 'Ringkasan persediaan',
+          description:
+            'Mengembalikan ringkasan persediaan untuk dashboard: total saldo stok, stok transit, stok baik, stok rusak (masing-masing berisi jumlah baris dan kuantitas per satuan), jumlah pengiriman hari ini, dan jumlah pemusnahan bulan berjalan. Mendukung filter cooperative_id dan warehouse_id. Memerlukan permission `stock.view`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'cooperative_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan koperasi' },
+            { name: 'warehouse_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filter berdasarkan gudang' },
+          ],
+          responses: {
+            '200': {
+              description: 'Ringkasan persediaan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              total: {
+                                type: 'object',
+                                description: 'Seluruh saldo stok dengan kuantitas > 0',
+                                properties: {
+                                  rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' }, example: { kg: 1250.5 } },
+                                },
+                              },
+                              transit: {
+                                type: 'object',
+                                description: 'Saldo stok di lokasi bertipe TRANSIT',
+                                properties: {
+                                  rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                              baik: {
+                                type: 'object',
+                                description: 'Saldo stok di lokasi bertipe STOK_BAIK',
+                                properties: {
+                                  rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                              rusak: {
+                                type: 'object',
+                                description: 'Saldo stok di lokasi bertipe STOK_RUSAK',
+                                properties: {
+                                  rows: { type: 'integer' },
+                                  quantity_by_unit: { type: 'object', additionalProperties: { type: 'number' } },
+                                },
+                              },
+                              pengiriman_hari_ini: { type: 'integer', description: 'Jumlah dokumen pengiriman (DIKIRIM/SELESAI) dengan tanggal pengiriman hari ini' },
+                              pemusnahan_bulan_ini: { type: 'integer', description: 'Jumlah dokumen pemusnahan SELESAI pada bulan kalender berjalan' },
                             },
                           },
                         },
@@ -8178,6 +9905,290 @@ export async function GET() {
           type: 'string',
           enum: ['ANGKA', 'PERSENTASE', 'PILIHAN', 'CHECKLIST', 'YA_TIDAK', 'FOTO', 'CATATAN'],
           description: 'Tipe input parameter QC. ANGKA=number, PERSENTASE=percentage, PILIHAN=dropdown, CHECKLIST=multiple checkbox, YA_TIDAK=pass/fail, FOTO=photo upload, CATATAN=free text.',
+        },
+        CooperativeRef: {
+          type: 'object',
+          description: 'Ringkasan koperasi (objek relasi)',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            code: { type: 'string' },
+            name: { type: 'string' },
+          },
+        },
+        WarehouseRef: {
+          type: 'object',
+          description: 'Ringkasan gudang (objek relasi)',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            code: { type: 'string' },
+            name: { type: 'string' },
+          },
+        },
+        WarehouseLocationRef: {
+          type: 'object',
+          description: 'Ringkasan lokasi gudang (objek relasi)',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            code: { type: 'string' },
+            name: { type: 'string' },
+            location_type: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] },
+          },
+        },
+        CommodityRef: {
+          type: 'object',
+          description: 'Ringkasan komoditas (objek relasi)',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            code: { type: 'string' },
+            name: { type: 'string' },
+            default_unit: { type: 'string', example: 'kg' },
+            image_url: { type: 'string', nullable: true },
+          },
+        },
+        UserRef: {
+          type: 'object',
+          description: 'Ringkasan pengguna (objek relasi)',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+          },
+        },
+        Warehouse: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            code: { type: 'string', example: 'GDG-01' },
+            name: { type: 'string', example: 'Gudang Utama' },
+            address: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            locations: {
+              type: 'array',
+              description: 'Daftar lokasi di dalam gudang (disertakan pada detail gudang dan hasil pembuatan gudang)',
+              items: { $ref: '#/components/schemas/WarehouseLocation' },
+            },
+            _count: {
+              type: 'object',
+              description: 'Jumlah relasi (disertakan pada daftar gudang)',
+              properties: { locations: { type: 'integer' } },
+            },
+          },
+        },
+        WarehouseLocation: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            code: { type: 'string', example: 'TRANSIT' },
+            name: { type: 'string', example: 'Area Transit' },
+            location_type: { type: 'string', enum: ['TRANSIT', 'STOK_BAIK', 'STOK_RUSAK', 'PENGIRIMAN', 'PENYESUAIAN', 'LAINNYA'] },
+            status: { type: 'string', enum: ['AKTIF', 'NONAKTIF'] },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+          },
+        },
+        StockBalance: {
+          type: 'object',
+          description: 'Saldo stok saat ini per kombinasi gudang, lokasi, komoditas, varian, grade, batch, dan satuan.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            location_id: { type: 'string', format: 'uuid' },
+            commodity_id: { type: 'string', format: 'uuid' },
+            commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+            grade_code: { type: 'string', nullable: true, example: 'A' },
+            grade_name: { type: 'string', nullable: true, example: 'Grade A' },
+            batch_number: { type: 'string', nullable: true, example: 'BATCH-KMD001-20260710-0001' },
+            unit: { type: 'string', example: 'kg' },
+            quantity: { type: 'number', example: 120.5 },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+            location: { $ref: '#/components/schemas/WarehouseLocationRef' },
+            commodity: { $ref: '#/components/schemas/CommodityRef' },
+            commodity_variant: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+          },
+        },
+        StockMovement: {
+          type: 'object',
+          description: 'Mutasi stok (kartu stok) — mencatat kuantitas masuk/keluar beserta saldo sebelum dan sesudah.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            location_id: { type: 'string', format: 'uuid' },
+            commodity_id: { type: 'string', format: 'uuid' },
+            commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+            grade_code: { type: 'string', nullable: true },
+            grade_name: { type: 'string', nullable: true },
+            batch_number: { type: 'string', nullable: true },
+            unit: { type: 'string', example: 'kg' },
+            movement_type: { type: 'string', enum: ['STOK_MASUK', 'PINDAH_LOKASI_KELUAR', 'PINDAH_LOKASI_MASUK', 'PENYESUAIAN_TAMBAH', 'PENYESUAIAN_KURANG', 'PEMUSNAHAN_STOK', 'PENGIRIMAN', 'KOREKSI'] },
+            quantity_in: { type: 'number', example: 50 },
+            quantity_out: { type: 'number', example: 0 },
+            balance_before: { type: 'number', example: 70.5 },
+            balance_after: { type: 'number', example: 120.5 },
+            reference_type: { type: 'string', nullable: true, description: 'Jenis dokumen sumber (mis. StockAdjustment, StockDisposal, StockDelivery, FarmerSale)' },
+            reference_id: { type: 'string', nullable: true, description: 'ID dokumen sumber' },
+            notes: { type: 'string', nullable: true },
+            created_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+            location: { $ref: '#/components/schemas/WarehouseLocationRef' },
+            commodity: { $ref: '#/components/schemas/CommodityRef' },
+            commodity_variant: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            created_by: {
+              allOf: [{ $ref: '#/components/schemas/UserRef' }],
+              nullable: true,
+            },
+          },
+        },
+        StockAdjustment: {
+          type: 'object',
+          description: 'Dokumen penyesuaian stok (tambah/kurang). Status: DIKIRIM -> DISETUJUI atau DIBATALKAN.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            location_id: { type: 'string', format: 'uuid' },
+            commodity_id: { type: 'string', format: 'uuid' },
+            commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+            grade_code: { type: 'string', nullable: true },
+            grade_name: { type: 'string', nullable: true },
+            batch_number: { type: 'string', nullable: true },
+            adjustment_number: { type: 'string', example: 'ADJ-20260711-0001' },
+            adjustment_type: { type: 'string', enum: ['TAMBAH', 'KURANG'] },
+            quantity: { type: 'number', example: 5 },
+            reason: { type: 'string', example: 'Selisih hasil stock opname' },
+            notes: { type: 'string', nullable: true },
+            proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', enum: ['DIKIRIM', 'DISETUJUI', 'DIBATALKAN'] },
+            created_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+            location: { $ref: '#/components/schemas/WarehouseLocationRef' },
+            commodity: { $ref: '#/components/schemas/CommodityRef' },
+            commodity_variant: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            created_by: {
+              allOf: [{ $ref: '#/components/schemas/UserRef' }],
+              nullable: true,
+            },
+          },
+        },
+        StockDisposal: {
+          type: 'object',
+          description: 'Dokumen pemusnahan stok. Status: DIKIRIM -> SELESAI atau DIBATALKAN.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            location_id: { type: 'string', format: 'uuid' },
+            commodity_id: { type: 'string', format: 'uuid' },
+            commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+            grade_code: { type: 'string', nullable: true },
+            grade_name: { type: 'string', nullable: true },
+            batch_number: { type: 'string', nullable: true },
+            disposal_number: { type: 'string', example: 'DSP-20260711-0001' },
+            quantity: { type: 'number', example: 10 },
+            reason: { type: 'string', example: 'Stok rusak karena jamur' },
+            disposal_date: { type: 'string', format: 'date-time' },
+            notes: { type: 'string', nullable: true },
+            proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] },
+            created_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+            location: { $ref: '#/components/schemas/WarehouseLocationRef' },
+            commodity: { $ref: '#/components/schemas/CommodityRef' },
+            commodity_variant: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            created_by: {
+              allOf: [{ $ref: '#/components/schemas/UserRef' }],
+              nullable: true,
+            },
+          },
+        },
+        StockDelivery: {
+          type: 'object',
+          description: 'Dokumen pengiriman stok keluar. Status: DIKIRIM -> SELESAI atau DIBATALKAN.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            cooperative_id: { type: 'string', format: 'uuid' },
+            warehouse_id: { type: 'string', format: 'uuid' },
+            location_id: { type: 'string', format: 'uuid' },
+            commodity_id: { type: 'string', format: 'uuid' },
+            commodity_variant_id: { type: 'string', format: 'uuid', nullable: true },
+            grade_code: { type: 'string', nullable: true },
+            grade_name: { type: 'string', nullable: true },
+            batch_number: { type: 'string', nullable: true },
+            delivery_number: { type: 'string', example: 'DLV-20260711-0001' },
+            quantity: { type: 'number', example: 500 },
+            destination_type: { type: 'string', enum: ['PEMBELI', 'KOPERASI_LAIN', 'GUDANG_LAIN', 'PROGRAM_PEMERINTAH', 'LAINNYA'] },
+            destination_name: { type: 'string', example: 'PT Beras Sejahtera' },
+            delivery_date: { type: 'string', format: 'date-time' },
+            notes: { type: 'string', nullable: true },
+            document_file_id: { type: 'string', format: 'uuid', nullable: true },
+            proof_file_id: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', enum: ['DIKIRIM', 'SELESAI', 'DIBATALKAN'] },
+            created_by_user_id: { type: 'string', format: 'uuid', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+            cooperative: { $ref: '#/components/schemas/CooperativeRef' },
+            warehouse: { $ref: '#/components/schemas/WarehouseRef' },
+            location: { $ref: '#/components/schemas/WarehouseLocationRef' },
+            commodity: { $ref: '#/components/schemas/CommodityRef' },
+            commodity_variant: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            created_by: {
+              allOf: [{ $ref: '#/components/schemas/UserRef' }],
+              nullable: true,
+            },
+          },
         },
       },
       responses: {
