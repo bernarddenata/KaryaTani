@@ -120,7 +120,15 @@ export default function LandingPage() {
 
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden bg-brand-dark">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0F3D25] via-[#1F6B3A] to-[#2E7A47]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/hero-sawah.jpg"
+          alt="Hamparan sawah Indonesia di pagi hari dengan latar gunung"
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover object-[center_65%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0F3D25]/95 via-[#12472B]/80 to-[#1F6B3A]/60" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0F3D25]/70 to-transparent" />
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,185,66,0.4)_0%,_transparent_60%)]" />
         <div className="relative z-10 mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
           <span className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.09em] text-warning">
