@@ -5235,6 +5235,125 @@ export async function GET() {
           },
         },
       },
+      '/disputes/{id}/messages': {
+        get: {
+          tags: ['Disputes'],
+          summary: 'Daftar pesan keberatan',
+          description: 'Mengembalikan riwayat pesan (chat) antara petani dan koperasi pada satu keberatan, urut dari yang terlama. Memerlukan permission disputes.view.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID keberatan',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar pesan keberatan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/DisputeMessage' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+        post: {
+          tags: ['Disputes'],
+          summary: 'Kirim balasan keberatan',
+          description: 'Mengirim balasan koperasi pada keberatan. Memerlukan permission disputes.edit atau disputes.resolve. Balasan koperasi otomatis membuat notifikasi untuk petani. Pesan tidak dapat dikirim bila keberatan sudah selesai.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID keberatan',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['message'],
+                  properties: {
+                    message: {
+                      type: 'string',
+                      example: 'Kami sudah menjadwalkan QC ulang untuk pengiriman Anda.',
+                      description: 'Isi pesan balasan koperasi.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Balasan berhasil dikirim',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/DisputeMessage' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+            '409': {
+              description: 'Keberatan sudah selesai sehingga tidak menerima pesan baru',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'DISPUTE_CLOSED', message: 'Keberatan sudah selesai dan tidak dapat menerima pesan baru.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
 
       // ==================== Reports ====================
       '/reports/commodities': {
@@ -7578,7 +7697,7 @@ export async function GET() {
         post: {
           tags: ['Mobile Farmer / Karya Taniku'],
           summary: 'Login petani',
-          description: 'Autentikasi petani menggunakan nomor HP atau nomor anggota dan PIN 6 digit. Mengembalikan bearer token JWT.',
+          description: 'Autentikasi petani menggunakan nomor HP atau nomor anggota dan PIN 6 digit. Mengembalikan access token JWT beserta refresh token (berlaku 90 hari).',
           requestBody: {
             required: true,
             content: {
@@ -7639,6 +7758,73 @@ export async function GET() {
                     success: false,
                     error: { code: 'VALIDATION_ERROR', message: 'Data yang dikirim tidak valid.' },
                   },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/mobile/farmer/auth/refresh': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Perbarui access token petani',
+          description: 'Menukarkan refresh token yang masih valid dengan pasangan access token dan refresh token baru. Endpoint ini tidak memerlukan bearer token pada header — refresh token dikirim melalui request body.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['refresh_token'],
+                  properties: {
+                    refresh_token: { type: 'string', description: 'Refresh token JWT yang didapat dari endpoint login atau register.' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Token baru berhasil diterbitkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              access_token: { type: 'string', description: 'JWT access token baru.' },
+                              refresh_token: { type: 'string', description: 'JWT refresh token baru, berlaku 90 hari.' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Refresh token tidak valid atau sudah kadaluarsa',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'INVALID_REFRESH_TOKEN', message: 'Refresh token tidak valid atau sudah kadaluarsa.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
                 },
               },
             },
@@ -8303,6 +8489,146 @@ export async function GET() {
           },
         },
       },
+      '/mobile/farmer/disputes/{disputeId}/messages': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Daftar pesan keberatan',
+          description: 'Mengembalikan riwayat pesan (chat) antara petani dan koperasi pada satu keberatan milik petani, urut dari yang terlama.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'disputeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID keberatan',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Daftar pesan keberatan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/DisputeMessage' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '404': {
+              description: 'Keberatan tidak ditemukan atau bukan milik petani',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Data keberatan tidak ditemukan.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Kirim pesan keberatan',
+          description: 'Mengirim pesan baru dari petani pada keberatan miliknya. Pesan tidak dapat dikirim bila keberatan sudah selesai.',
+          security: [{ mobileFarmerAuth: [] }],
+          parameters: [
+            {
+              name: 'disputeId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'ID keberatan',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['message'],
+                  properties: {
+                    message: {
+                      type: 'string',
+                      maxLength: 2000,
+                      example: 'Mohon dicek ulang hasil timbangan saya.',
+                      description: 'Isi pesan, maksimal 2000 karakter.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Pesan berhasil dikirim',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: { $ref: '#/components/schemas/DisputeMessage' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '404': {
+              description: 'Keberatan tidak ditemukan atau bukan milik petani',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'NOT_FOUND', message: 'Data keberatan tidak ditemukan.' },
+                  },
+                },
+              },
+            },
+            '409': {
+              description: 'Keberatan sudah selesai sehingga tidak menerima pesan baru',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    success: false,
+                    error: { code: 'DISPUTE_CLOSED', message: 'Keberatan sudah selesai dan tidak dapat menerima pesan baru.' },
+                  },
+                },
+              },
+            },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
       '/mobile/farmer/quality-history': {
         get: {
           tags: ['Mobile Farmer / Karya Taniku'],
@@ -8461,6 +8787,44 @@ export async function GET() {
           },
         },
       },
+      '/mobile/farmer/notifications/read-all': {
+        patch: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Tandai semua notifikasi dibaca',
+          description: 'Menandai seluruh notifikasi petani yang belum dibaca sebagai sudah dibaca.',
+          security: [{ mobileFarmerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Semua notifikasi berhasil ditandai dibaca',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              marked_read: {
+                                type: 'integer',
+                                example: 5,
+                                description: 'Jumlah notifikasi yang ditandai sebagai dibaca.',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
       '/mobile/farmer/files/upload': {
         post: {
           tags: ['Mobile Farmer / Karya Taniku'],
@@ -8550,6 +8914,196 @@ export async function GET() {
                         type: 'object',
                         properties: {
                           data: { $ref: '#/components/schemas/MobileHomeSummary' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/mobile/farmer/devices': {
+        post: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Registrasi perangkat push notification',
+          description: 'Mendaftarkan token FCM/APNS perangkat petani untuk menerima push notification. Idempoten per kombinasi petani dan token — registrasi ulang dengan token yang sama tidak membuat duplikat.',
+          security: [{ mobileFarmerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['device_token'],
+                  properties: {
+                    device_token: { type: 'string', description: 'Token FCM/APNS perangkat.' },
+                    platform: { type: 'string', enum: ['android', 'ios'], default: 'android', description: 'Platform perangkat.' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Perangkat berhasil didaftarkan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              platform: { type: 'string', example: 'android' },
+                              registered: { type: 'boolean', example: true },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '422': {
+              description: 'Data tidak valid',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Hapus registrasi perangkat',
+          description: 'Menghapus token perangkat petani dari daftar penerima push notification, misalnya saat logout dari perangkat.',
+          security: [{ mobileFarmerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['device_token'],
+                  properties: {
+                    device_token: { type: 'string', description: 'Token FCM/APNS perangkat yang akan dihapus.' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Perangkat berhasil dihapus',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              deleted: { type: 'boolean', example: true },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/mobile/farmer/cooperative': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Detail koperasi petani',
+          description: 'Mengembalikan detail dan kontak koperasi tempat petani yang sedang login terdaftar.',
+          security: [{ mobileFarmerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Detail koperasi',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              code: { type: 'string', example: 'KOP-001' },
+                              name: { type: 'string', example: 'Koperasi Tani Makmur' },
+                              phone: { type: 'string', nullable: true, example: '0274123456' },
+                              email: { type: 'string', nullable: true, example: 'info@koptanimakmur.id' },
+                              address: { type: 'string', nullable: true },
+                              village: { type: 'string', nullable: true },
+                              district: { type: 'string', nullable: true },
+                              city: { type: 'string', nullable: true },
+                              province: { type: 'string', nullable: true },
+                              legal_number: { type: 'string', nullable: true },
+                              status: { type: 'string', example: 'ACTIVE' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/mobile/farmer/help-articles': {
+        get: {
+          tags: ['Mobile Farmer / Karya Taniku'],
+          summary: 'Artikel bantuan',
+          description: 'Mengembalikan daftar artikel bantuan/FAQ yang dikelola server-side, urut berdasarkan kolom order.',
+          security: [{ mobileFarmerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Daftar artikel bantuan',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/SuccessResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                id: { type: 'string', format: 'uuid' },
+                                title: { type: 'string', example: 'Cara mengajukan keberatan' },
+                                body: { type: 'string' },
+                                order: { type: 'integer', example: 1 },
+                              },
+                            },
+                          },
                         },
                       },
                     ],
@@ -8695,6 +9249,8 @@ export async function GET() {
             id: { type: 'string', format: 'uuid' },
             code: { type: 'string', example: 'KOP-001' },
             name: { type: 'string', example: 'Koperasi Tani Makmur' },
+            phone: { type: 'string', nullable: true, example: '0274123456' },
+            email: { type: 'string', nullable: true, example: 'info@koptanimakmur.id' },
             province: { type: 'string', nullable: true },
             city: { type: 'string', nullable: true },
             district: { type: 'string', nullable: true },
@@ -9438,6 +9994,20 @@ export async function GET() {
             },
           },
         },
+        DisputeMessage: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            sender_type: {
+              type: 'string',
+              enum: ['FARMER', 'KOPERASI'],
+              description: 'Pengirim pesan: petani (FARMER) atau petugas koperasi (KOPERASI).',
+            },
+            sender_name: { type: 'string', example: 'Budi Santoso' },
+            message: { type: 'string', example: 'Mohon dicek ulang hasil timbangan saya.' },
+            created_at: { type: 'string', format: 'date-time' },
+          },
+        },
         MobileFarmerLoginRequest: {
           type: 'object',
           required: ['identifier', 'pin'],
@@ -9458,7 +10028,7 @@ export async function GET() {
           type: 'object',
           properties: {
             access_token: { type: 'string' },
-            refresh_token: { type: 'string', nullable: true },
+            refresh_token: { type: 'string', description: 'JWT refresh token, berlaku 90 hari.' },
             user: {
               type: 'object',
               properties: {
