@@ -31,6 +31,7 @@ import {
   Shield,
   Key,
   Settings,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -249,6 +250,12 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/akses-api",
         permission: "api_access.view",
         icon: Key,
+      },
+      {
+        label: "Aplikasi Mobile",
+        href: "/aplikasi",
+        permission: "settings.view",
+        icon: Smartphone,
       },
       {
         label: "Pengaturan",
