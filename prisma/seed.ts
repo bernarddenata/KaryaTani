@@ -569,13 +569,17 @@ async function main() {
   const farmers: Record<string, any> = {}
   const reps: Record<string, any> = {}
   for (const def of farmerDefinitions) {
+    // PIN demo 123456 — petani langsung aktif di aplikasi Karya Taniku
+    // tanpa perlu registrasi ulang setiap kali database di-seed.
+    const farmerPinHash = await bcrypt.hash('123456', 12)
     const farmer = await prisma.farmer.upsert({
       where: { farmer_number: def.farmer_number },
-      update: { name: def.name, phone: def.phone, seller_type: def.seller_type, village: def.village, address: def.address, cooperative_id: def.cooperative_id },
+      update: { name: def.name, phone: def.phone, seller_type: def.seller_type, village: def.village, address: def.address, cooperative_id: def.cooperative_id, pin_hash: farmerPinHash, app_activated_at: new Date() },
       create: {
         cooperative_id: def.cooperative_id, farmer_number: def.farmer_number, name: def.name,
         phone: def.phone, seller_type: def.seller_type, verification_status: 'TERVERIFIKASI',
         village: def.village, address: def.address,
+        pin_hash: farmerPinHash, app_activated_at: new Date(),
       },
     })
     farmers[def.farmer_number] = farmer
